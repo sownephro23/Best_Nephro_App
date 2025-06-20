@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculette Néphro Pro</title>
+    <!-- Theme Color for PWA -->
+    <meta name="theme-color" content="#38bdf8">
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js for graphs -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@0.378.0/dist/lucide.min.js"></script>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="./manifest.json">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f0f4f8; }
+        .tab-button {
+            transition: all 0.2s ease-in-out;
+            color: #475569; /* slate-600 */
+        }
+        .tab-active { 
+            background-color: #10b981; /* emerald-500 */
+            color: #ffffff;
+            font-weight: 600;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        }
+        .calculator-card { 
+            transition: all 0.2s ease-in-out; 
+            background-color: #ffffff;
+        }
+        .unit-select {
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            background-image: none;
+            padding-right: 0.5rem;
+        }
+    </style>
+</head>
+<body class="text-slate-800">
+
+    <!-- Main Container -->
+    <div id="app-container" class="max-w-7xl mx-auto p-2 md:p-4">
+
+        <!-- Header and Search -->
+        <header class="bg-gradient-to-br from-sky-400 to-blue-500 text-white p-4 md:p-6 rounded-2xl shadow-lg mb-6 sticky top-2 z-20">
+            <div class="flex items-center justify-center gap-3">
+                <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="opacity-70 transform -scale-x-100"><path d="M15.41 21.06a10.94 10.94 0 0 1-8.5-4.46 10.13 10.13 0 0 1-2.52-7.39 9.83 9.83 0 0 1 3.55-7.23 10.33 10.33 0 0 1 8.8-3C20.69 1.48 24.52 6 22 10.55a8.73 8.73 0 0 1-5.34 4.79 10.45 10.45 0 0 1-1.25.32A10.38 10.38 0 0 1 15.41 21.06Z"></path></svg>
+                <h1 class="text-2xl md:text-3xl font-extrabold text-center">Calculette Néphro</h1>
+                <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="opacity-70"><path d="M15.41 21.06a10.94 10.94 0 0 1-8.5-4.46 10.13 10.13 0 0 1-2.52-7.39 9.83 9.83 0 0 1 3.55-7.23 10.33 10.33 0 0 1 8.8-3C20.69 1.48 24.52 6 22 10.55a8.73 8.73 0 0 1-5.34 4.79 10.45 10.45 0 0 1-1.25.32A10.38 10.38 0 0 1 15.41 21.06Z"></path></svg>
+            </div>
+             <p class="text-center text-sky-100 mt-1">L'outil essentiel pour la pratique clinique</p>
+            <div class="mt-4 relative">
+                <input type="text" id="searchInput" placeholder="Rechercher un calculateur..." class="w-full pl-10 pr-4 py-2.5 border-0 rounded-lg bg-white/20 text-white placeholder-sky-100 focus:ring-2 focus:ring-white/80 focus:bg-white/30 transition">
+                <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 text-sky-100 w-5 h-5"></i>
+            </div>
+        </header>
+
+        <!-- Main Navigation Tabs -->
+        <nav id="main-tabs" class="flex flex-wrap justify-center gap-2 mb-6 bg-slate-200/50 p-1.5 rounded-xl">
+            <button data-tab="clinique" class="tab-button tab-active flex items-center gap-2 px-3 py-2 rounded-lg text-sm md:px-4 md:text-base"><i data-lucide="stethoscope" class="w-5 h-5"></i>Clinique</button>
+            <button data-tab="dialyse" class="tab-button flex items-center gap-2 px-3 py-2 rounded-lg text-sm md:px-4 md:text-base"><i data-lucide="droplets" class="w-5 h-5"></i>Dialyse</button>
+            <button data-tab="transplantation" class="tab-button flex items-center gap-2 px-3 py-2 rounded-lg text-sm md:px-4 md:text-base"><i data-lucide="heart-pulse" class="w-5 h-5"></i>Transplantation</button>
+            <button data-tab="historique" class="tab-button flex items-center gap-2 px-3 py-2 rounded-lg text-sm md:px-4 md:text-base"><i data-lucide="history" class="w-5 h-5"></i>Historique</button>
+        </nav>
+
+        <!-- Content Panes -->
+        <main id="content-panes">
+            <div id="clinique-pane" class="tab-pane grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6"></div>
+            <div id="dialyse-pane" class="tab-pane hidden grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6"></div>
+            <div id="transplantation-pane" class="tab-pane hidden grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6"></div>
+            <div id="historique-pane" class="tab-pane hidden space-y-4">
+                 <div class="flex justify-between items-center bg-white p-3 rounded-lg shadow-sm">
+                    <p class="text-sm text-slate-600">Les 20 derniers calculs sont sauvegardés.</p>
+                    <button id="clearHistoryBtn" class="text-sm font-semibold text-red-500 hover:text-red-700 flex items-center gap-1"><i data-lucide="trash-2" class="w-4 h-4"></i>Vider</button>
+                </div>
+                <div id="history-list" class="space-y-3"></div>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="text-center mt-8 py-4">
+            <p class="text-sm text-slate-500">Ibrahima Sow IDH Néphrologie</p>
+            <p class="text-xs text-slate-400">Dernière mise à jour : 20 juin 2025</p>
+        </footer>
+
+    </div>
+
+    <!-- Formula Modal -->
+    <div id="formula-modal" class="fixed inset-0 bg-black/60 hidden items-center justify-center p-4 z-50 backdrop-blur-sm">
+        <div class="bg-white rounded-2xl shadow-xl p-6 max-w-lg w-full transform transition-all scale-95 opacity-0" id="modal-inner">
+            <div class="flex justify-between items-center mb-4">
+                <h3 id="modal-title" class="text-lg font-bold text-slate-800">Formule de Calcul</h3>
+                <button id="close-modal-btn" class="text-slate-500 hover:text-slate-800"><i data-lucide="x" class="w-6 h-6"></i></button>
+            </div>
+            <div id="modal-content" class="text-sm text-slate-600 bg-slate-50 p-4 rounded-lg max-h-[70vh] overflow-y-auto"></div>
+        </div>
+    </div>
+
+
+    <script>
+    // --- PWA Service Worker Registration ---
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('./sw.js')
+                .then(reg => console.log('Service Worker enregistré:', reg))
+                .catch(err => console.log('Erreur Service Worker:', err));
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const appState = {
+            values: { gender: 'male' },
+            units: { creatinine: 'mg/dL', calcium: 'mg/dL', albumin: 'g/dL', urea: 'mg/dL', hb: 'g/dL' },
+            history: JSON.parse(localStorage.getItem('nephro_history_v18')) || [],
+        };
+        
+        let creatinineChart = null;
+
+        const calculators = [
+            // === CLINIQUE ===
+            {
+                id: 'dfg_clearance',
+                title: 'DFG (CKD-EPI 2021)',
+                tags: 'dfg clairance créatinine ckd-epi',
+                pane: 'clinique',
+                html: () => `<div class="grid grid-cols-1 md:grid-cols-2 gap-4">${inputField('age', 'Âge', 'number', 'ans')}${inputField('creat', 'Créatinine', 'number')}${genderDropdown()}</div>${resultDisplay('dfg_clearance', ['dfg'])}`,
+                formula: `<p><b>CKD-EPI 2021 (Créatinine):</b><br>142 x min(SCr/κ, 1)<sup>α</sup> x max(SCr/κ, 1)<sup>-1.200</sup> x 0.9938<sup>Âge</sup> x (1.012 si Femme)</p><p class='text-xs italic mt-2'>Réf: Inker LA, et al. N Engl J Med. 2021.</p>`,
+                calculate: function() {
+                    const { age, creat, gender } = appState.values;
+                    if (!age || !creat) return { dfg: 'N/A' };
+                    let creat_mgdl = convertUnit(creat, appState.units.creatinine, 'mg/dL');
+                    if (!creat_mgdl) return { dfg: 'N/A' };
+                    const k = gender === 'female' ? 0.7 : 0.9;
+                    const a = gender === 'female' ? -0.241 : -0.302;
+                    const gfr = 142 * Math.pow(Math.min(creat_mgdl / k, 1), a) * Math.pow(Math.max(creat_mgdl / k, 1), -1.200) * Math.pow(0.9938, age) * (gender === 'female' ? 1.012 : 1);
+                    return { dfg: `<span class="font-bold text-3xl text-emerald-600">${Math.round(gfr)}</span> mL/min/1.73m²` };
+                }
+            },
+            {
+                id: 'fena',
+                title: 'Fraction d\'Excrétion du Sodium (FeNa)',
+                tags: 'fena sodium fraction excrétion urinaire insuffisance rénale aigue ira',
+                pane: 'clinique',
+                html: () => `<div class="grid grid-cols-1 md:grid-cols-2 gap-4">${inputField('na', 'Natrémie (P)', 'number', 'mmol/L')}${inputField('u_na', 'Sodium (U)', 'number', 'mmol/L')}${inputField('creat', 'Créatinine (P)', 'number')}${inputField('u_creat', 'Créatinine (U)', 'number')}</div><p class="text-xs text-center text-slate-500 mt-2">Unité Créat. Urinaire = Créat. Plasmatique (${appState.units.creatinine}).</p>${resultDisplay('fena', ['fena_result', 'fena_interpretation'])}<div class="text-xs text-center text-amber-700 bg-amber-50 p-2 rounded-lg mt-3"><b>Note:</b> Moins fiable chez les patients sous diurétiques.</div>`,
+                formula: 'FeNa (%) = [(Na Urinaire x Créat Plasmatique) / (Na Plasmatique x Créat Urinaire)] x 100',
+                calculate: function() {
+                    const { na, u_na, creat, u_creat } = appState.values;
+                    if (!na || !u_na || !creat || !u_creat) { return { fena_result: 'N/A', fena_interpretation: '' }; }
+                    const fena = ((u_na * creat) / (na * u_creat)) * 100;
+                    let interpretation, color;
+                    if (fena < 1) { interpretation = 'Suggère une cause pré-rénale.'; color = 'text-green-700'; }
+                    else if (fena > 2) { interpretation = 'Suggère une nécrose tubulaire aiguë.'; color = 'text-red-700'; }
+                    else { interpretation = 'Résultat non-spécifique.'; color = 'text-amber-700'; }
+                    return { fena_result: `<span class="font-bold text-3xl">${fena.toFixed(2)} %</span>`, fena_interpretation: `<span class="font-semibold ${color}">${interpretation}</span>`};
+                }
+            },
+            {
+                id: 'sodium_deficit',
+                title: 'Déficit en Sodium (Hyponatrémie)',
+                tags: 'sodium deficit hyponatrémie watson ect',
+                pane: 'clinique',
+                html: () => `<div class="text-sm text-center bg-emerald-50 text-emerald-700 p-2 rounded-lg mb-4">Calcul pour hyponatrémie hypovolémique. L'Eau Corporelle Totale (ECT) est estimée par la formule de Watson.</div><div class="grid grid-cols-1 md:grid-cols-2 gap-4">${inputField('weight', 'Poids', 'number', 'kg')}${inputField('height', 'Taille', 'number', 'cm')}${inputField('age', 'Âge', 'number', 'ans')}${genderDropdown()}${inputField('na', 'Natrémie actuelle', 'number', 'mmol/L')}${inputField('target_na', 'Natrémie cible', 'number', 'mmol/L', 135)}</div>${resultDisplay('sodium_deficit', ['na_deficit_mmol', 'na_deficit_g', 'nacl_deficit_g'])}`,
+                formula: '<b>ECT (Watson) Homme:</b> 2.447 - (0.09156 x Âge) + (0.1074 x Taille cm) + (0.3362 x Poids kg)<br><b>ECT (Watson) Femme:</b> -2.097 + (0.1069 x Taille cm) + (0.2466 x Poids kg)<br><b>Déficit (mmol):</b> (Natrémie Cible - Natrémie Actuelle) x ECT',
+                calculate: function() {
+                    const { weight, height, age, na, target_na, gender } = appState.values;
+                    if (!weight || !height || !age || !na || !target_na) return { na_deficit_mmol: 'N/A' };
+                    let ect;
+                    if (gender === 'male') { ect = 2.447 - (0.09156 * age) + (0.1074 * height) + (0.3362 * weight); } 
+                    else { ect = -2.097 + (0.1069 * height) + (0.2466 * weight); }
+                    const na_deficit = (target_na - na) * ect;
+                    if(na_deficit <= 0) return { na_deficit_mmol: 'Aucun déficit', na_deficit_g: '', nacl_deficit_g: '' };
+                    return { na_deficit_mmol: `<span class="text-3xl font-bold text-emerald-600">${na_deficit.toFixed(0)}</span> mmol de Na`, na_deficit_g: `<span class="text-xl font-semibold">${(na_deficit * 0.023).toFixed(1)}</span> g de Sodium (Na)`, nacl_deficit_g: `<span class="text-xl font-semibold">${(na_deficit * 0.0585).toFixed(1)}</span> g de Chlorure de Sodium (NaCl)` };
+                }
+            },
+            {
+                id: 'corrected_calcium',
+                title: 'Calcémie Corrigée',
+                tags: 'calcium albumine protides calcémie corrigée albert isbell payne',
+                pane: 'clinique',
+                html: () => `<div class="grid grid-cols-1 md:grid-cols-2 gap-4">${inputField('ca', 'Calcémie mesurée', 'number')}${inputField('alb', 'Albumine', 'number')}${inputField('prot', 'Protides totaux', 'number', 'g/L')}</div>${resultDisplay('corrected_calcium', ['corrected_ca_standard', 'corrected_ca_old_revised', 'corrected_ca_new_revised'])}`,
+                formula: `<div class='space-y-4'><div><b class='text-slate-700'>1. Formule Standard (Payne):</b><br>Ca Corrigée (mmol/L) = Ca Mesurée (mmol/L) + ((40 - Albumine g/L) * 0.02)</div><div><b class='text-slate-700'>2. Ancienne Formule Révisée (avec Protides):</b><br>Ca Corrigée (mg/dL) = Ca(mes) + 0.49 * (4.4 - Alb) + 0.19 * (8.0 - Protides)<p class='text-xs mt-1 text-slate-500'>Unités: Ca(mes) en mg/dL, Alb en g/dL, Protides en g/dL.</p></div><div><b class='text-slate-700'>3. Nouvelle Formule Révisée (Albert-Isbell, 2023):</b><br>Ca(rév) = Ca(mes) + [(4 - Alb) * (Ca(mes) * 0.052)]<p class='text-xs mt-1 text-slate-500'>Unités: Ca(mes) en mg/dL, Alb en g/dL.</p><p class='text-xs italic text-slate-500'>Réf: Albert SG, Isbell TS. Clinica Chimica Acta. 2023.</p></div></div>`,
+                calculate: function() {
+                    const { ca, alb, prot } = appState.values;
+                    const selectedUnit = appState.units.calcium;
+                    if (!ca || !alb) { return { corrected_ca_standard: `Standard: <span class="font-bold">N/A</span>`, corrected_ca_old_revised: `Anc. Révisée: <span class="font-bold">N/A</span>`, corrected_ca_new_revised: `Nouv. Révisée: <span class="font-bold text-emerald-600">N/A</span>` }; }
+                    const ca_mmol_input = convertUnit(ca, selectedUnit, 'mmol/L');
+                    const ca_mgdl_input = convertUnit(ca, selectedUnit, 'mg/dL');
+                    const alb_gl_input = convertUnit(alb, appState.units.albumin, 'g/L');
+                    const alb_gdl_input = convertUnit(alb, appState.units.albumin, 'g/dL');
+                    const standard_result_mmol = ca_mmol_input + ((40 - alb_gl_input) * 0.02);
+                    const final_standard_result = convertUnit(standard_result_mmol, 'mmol/L', selectedUnit);
+                    const standard_display = `${final_standard_result.toFixed(2)} <span class="text-base">${selectedUnit}</span>`;
+                    let old_revised_display = 'N/A (Protides manquants)';
+                    if (prot) {
+                        const prot_gdl_input = prot / 10;
+                        const old_revised_result_mgdl = ca_mgdl_input + 0.49 * (4.4 - alb_gdl_input) + 0.19 * (8.0 - prot_gdl_input);
+                        const final_old_revised_result = convertUnit(old_revised_result_mgdl, 'mg/dL', selectedUnit);
+                        old_revised_display = `${final_old_revised_result.toFixed(2)} <span class="text-base">${selectedUnit}</span>`;
+                    }
+                    const new_revised_result_mgdl = ca_mgdl_input + ((4 - alb_gdl_input) * (ca_mgdl_input * 0.052));
+                    const final_new_revised_result = convertUnit(new_revised_result_mgdl, 'mg/dL', selectedUnit);
+                    const new_revised_display = `${final_new_revised_result.toFixed(2)} <span class="text-base">${selectedUnit}</span>`;
+                    return { corrected_ca_standard: `Standard: <span class="font-bold">${standard_display}</span>`, corrected_ca_old_revised: `Anc. Révisée: <span class="font-bold">${old_revised_display}</span>`, corrected_ca_new_revised: `Nouv. Révisée: <span class="font-bold text-emerald-600">${new_revised_display}</span>` };
+                }
+            },
+             {
+                id: 'iron_deficit',
+                title: 'Déficit en Fer (Ganzoni)',
+                tags: 'fer, anémie, carence, ganzoni, dialyse, mrc, anemie',
+                pane: 'clinique',
+                html: () => `<div class="grid grid-cols-1 md:grid-cols-2 gap-4">${inputField('weight', 'Poids', 'number', 'kg')}${inputField('actual_hb', 'Hémoglobine Actuelle', 'number')}${inputField('target_hb', 'Hémoglobine Cible', 'number', '', 11)}</div>${resultDisplay('iron_deficit', ['iron_deficit_result'])}<p class="text-xs text-slate-400 text-center mt-2">Valable pour les patients dialysés et non-dialysés.</p>`,
+                formula: `<b>Déficit en Fer (mg) = Poids (kg) x (Hb Cible - Hb Actuelle) [g/dL] x 2.4 + Réserves en Fer</b><br><br><p class='text-xs italic'>Les réserves en fer sont estimées à 500 mg pour un poids > 35 kg.</p>`,
+                calculate: function() {
+                    const { weight, actual_hb, target_hb } = appState.values;
+                    const hbUnit = appState.units.hb;
+                    if(!weight || !actual_hb || !target_hb) return { iron_deficit_result: 'N/A'};
+                    const actual_hb_gdl = convertUnit(actual_hb, hbUnit, 'g/dL');
+                    const target_hb_gdl = convertUnit(target_hb, hbUnit, 'g/dL');
+                    const hb_diff = target_hb_gdl - actual_hb_gdl;
+                    if(hb_diff <= 0) return { iron_deficit_result: 'Aucun déficit calculé.'};
+                    const iron_stores = weight > 35 ? 500 : 15 * weight;
+                    const deficit = weight * hb_diff * 2.4 + iron_stores;
+                    return { iron_deficit_result: `<span class="font-bold text-3xl text-emerald-600">${Math.round(deficit)}</span> mg` };
+                }
+            },
+            {
+                id: 'creat_graph',
+                title: 'Graphique Créatininémie',
+                tags: 'graphique créatinine évolution',
+                pane: 'clinique',
+                html: () => `<div class="space-y-3"><div id="creat-entries" class="space-y-2"><div class="flex gap-2 items-center"><input type="date" class="creat-date border border-slate-300 p-2 rounded-lg flex-1 bg-slate-50" value="${new Date().toISOString().split('T')[0]}"><input type="number" step="0.01" class="creat-value border border-slate-300 p-2 rounded-lg flex-1 bg-slate-50" placeholder="Valeur"><button class="creat-remove text-red-500 hover:text-red-700 p-2"><i data-lucide="x" class="w-5 h-5"></i></button></div></div><button id="add-creat-entry" class="text-sm font-semibold text-emerald-600 flex items-center gap-1"><i data-lucide="plus-circle" class="w-4 h-4"></i>Ajouter une entrée</button></div><div class="mt-4 bg-slate-50 p-2 rounded-lg"><canvas id="creatinine-chart-canvas"></canvas></div>`,
+                formula: 'Représentation graphique des valeurs de créatininémie saisies au fil du temps pour visualiser une tendance.',
+                calculate: () => ({}),
+                postRender: function(card) {
+                     const ctx = card.querySelector('#creatinine-chart-canvas').getContext('2d');
+                     if (creatinineChart) creatinineChart.destroy();
+                     const entries = Array.from(card.querySelectorAll('#creat-entries > div')).map(row => ({ date: row.querySelector('.creat-date').value, value: parseFloat(row.querySelector('.creat-value').value) })).filter(e => e.date && !isNaN(e.value)).sort((a,b) => new Date(a.date) - new Date(b.date));
+                     creatinineChart = new Chart(ctx, { type: 'line', data: { labels: entries.map(e => new Date(e.date).toLocaleDateString('fr-FR')), datasets: [{ label: `Créatininémie (${appState.units.creatinine})`, data: entries.map(e => e.value), borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.1)', tension: 0.1, fill: true }] }, options: { responsive: true, maintainAspectRatio: true } });
+                }
+            },
+            // === DIALYSE ===
+            {
+                id: 'rrf',
+                title: 'Fonction Rénale Résiduelle (HD & DP)',
+                tags: 'frr rrf fonction rénale résiduelle dialyse hémodialyse péritonéale clairance urée',
+                pane: 'dialyse',
+                html: () => `<div class="grid grid-cols-1 md:grid-cols-2 gap-4">${inputField('urea_p', 'Urée Plasmatique', 'number')}${inputField('urea_u', 'Urée Urinaire', 'number')}${inputField('creat', 'Créatinine Plasmatique', 'number')}${inputField('u_creat', 'Créatinine Urinaire', 'number')}<div class="md:col-span-2">${inputField('urine_vol_24h', 'Volume Urinaire / 24h', 'number', 'mL')}</div></div><p class="text-xs text-center text-slate-500 mt-2">Les unités Urée/Créat. urinaires doivent être les mêmes que les plasmatiques.</p>${resultDisplay('rrf', ['rrf_result', 'rrf_interpretation'])}`,
+                formula: `La FRR est la moyenne des clairances de l'urée et de la créatinine.<br><br><b>Clairance (mL/min) = [Concentration Urinaire x Volume Urinaire (mL)] / [Concentration Plasmatique x 1440 (min)]</b><br><br><b>FRR = (Clairance Urée + Clairance Créatinine) / 2</b>`,
+                calculate: function() {
+                    const { urea_p, urea_u, creat, u_creat, urine_vol_24h } = appState.values;
+                    if (!urea_p || !urea_u || !creat || !u_creat || !urine_vol_24h) return { rrf_result: 'N/A', rrf_interpretation: '' };
+                    const urea_clearance = (urea_u * urine_vol_24h) / (urea_p * 1440);
+                    const creat_clearance = (u_creat * urine_vol_24h) / (creat * 1440);
+                    const rrf = (urea_clearance + creat_clearance) / 2;
+                    let interpretation = '';
+                    if (urine_vol_24h < 100) { interpretation = `<span class="font-semibold text-red-600">Diurèse < 100 mL/24h (anurie). FRR perdue.</span>`; } 
+                    else if (rrf >= 2) { interpretation = `<span class="font-semibold text-green-600">FRR conservée (> 2 mL/min). Associée à une meilleure survie.</span>`; } 
+                    else { interpretation = `<span class="font-semibold text-orange-600">FRR significativement altérée (< 2 mL/min).</span>`; }
+                    return { rrf_result: `<span class="font-bold text-3xl text-emerald-600">${rrf.toFixed(2)}</span> mL/min`, rrf_interpretation: interpretation };
+                }
+            },
+            {
+                id: 'ktv',
+                title: 'Kt/V (Daugirdas 2)',
+                tags: 'kt/v daugirdas dialyse urée',
+                pane: 'dialyse',
+                html: () => `<div class="grid grid-cols-1 md:grid-cols-2 gap-4">${inputField('urea_p', 'Urée pré-dialyse', 'number')}${inputField('post_urea', 'Urée post-dialyse', 'number')}${inputField('duration', 'Durée dialyse', 'number', 'heures')}${inputField('uf_volume', 'Volume ultrafiltration', 'number', 'L')}${inputField('post_weight', 'Poids post-dialyse', 'number', 'kg')}</div>${resultDisplay('ktv', ['ktv_result'])}`,
+                formula: 'Kt/V = -ln((Urée Post / Urée Pré) - 0.008 * t) + (4 - 3.5 * (Urée Post / Urée Pré)) * UF / Poids Post',
+                calculate: function() {
+                    const { urea_p, post_urea, duration, uf_volume, post_weight } = appState.values;
+                    if (!urea_p || !post_urea || !duration || !uf_volume || !post_weight) return { ktv_result: 'N/A' };
+                    const r = post_urea / urea_p;
+                    const ktv = -Math.log(r - 0.008 * duration) + (4 - 3.5 * r) * uf_volume / post_weight;
+                    return { ktv_result: `<span class="font-bold text-3xl">${ktv.toFixed(2)}</span>` };
+                }
+            },
+            {
+                id: 'urr',
+                title: 'Taux de Réduction de l\'Urée (URR)',
+                tags: 'urr dialyse urée',
+                pane: 'dialyse',
+                html: () => `<div class="grid grid-cols-1 md:grid-cols-2 gap-4">${inputField('urea_p', 'Urée pré-dialyse', 'number')}${inputField('post_urea', 'Urée post-dialyse', 'number')}</div>${resultDisplay('urr', ['urr_result'])}`,
+                formula: 'URR (%) = ((Urée Pré - Urée Post) / Urée Pré) x 100',
+                calculate: function() {
+                    const { urea_p, post_urea } = appState.values;
+                    if (!urea_p || !post_urea) return { urr_result: 'N/A' };
+                    const urr = ((urea_p - post_urea) / urea_p) * 100;
+                    return { urr_result: `<span class="font-bold text-3xl">${urr.toFixed(1)}</span> %` };
+                }
+            },
+            // === TRANSPLANTATION ===
+            {
+                id: 'graft_loss_risk',
+                title: 'Risque de Perte du Greffon',
+                tags: 'transplantation greffon rein risque perte',
+                pane: 'transplantation',
+                html: () => `<div class="grid grid-cols-1 md:grid-cols-2 gap-4">${inputField('age', 'Âge', 'number', 'ans')}${inputField('creat', 'Créatinine', 'number')}${genderDropdown()}<div class="space-y-1.5"><label class="text-sm font-medium text-slate-600">Donneur décédé</label><div class="flex rounded-lg border border-slate-300 overflow-hidden"><input type="radio" name="donor_type" id="donor_yes" value="yes" class="sr-only peer/yes"><label for="donor_yes" class="w-1/2 text-center p-2 cursor-pointer peer-checked/yes:bg-emerald-500 peer-checked/yes:text-white transition">Oui</label><input type="radio" name="donor_type" id="donor_no" value="no" class="sr-only peer/no" checked><label for="donor_no" class="w-1/2 text-center p-2 cursor-pointer peer-checked/no:bg-emerald-500 peer-checked/no:text-white transition border-l border-slate-300">Non</label></div></div><div class="space-y-1.5"><label class="text-sm font-medium text-slate-600">Re-transplantation</label><div class="flex rounded-lg border border-slate-300 overflow-hidden"><input type="radio" name="retransplant" id="retransplant_yes" value="yes" class="sr-only peer/re_yes"><label for="retransplant_yes" class="w-1/2 text-center p-2 cursor-pointer peer-checked/re_yes:bg-emerald-500 peer-checked/re_yes:text-white transition">Oui</label><input type="radio" name="retransplant" id="retransplant_no" value="no" class="sr-only peer/re_no" checked><label for="retransplant_no" class="w-1/2 text-center p-2 cursor-pointer peer-checked/re_no:bg-emerald-500 peer-checked/re_no:text-white transition border-l border-slate-300">Non</label></div></div></div>${resultDisplay('graft_loss_risk', ['graft_risk'])}<p class="text-xs text-slate-400 text-center mt-2">Basé sur le modèle de Foucher et al.</p>`,
+                formula: 'Score de risque de perte du greffon à 5 ans, basé sur le modèle de Foucher et al. (2010). Le score est calculé à partir de l\'âge du receveur, du DFG (estimé par MDRD), du type de donneur et de la re-transplantation.',
+                calculate: function() {
+                    const { age, creat, gender } = appState.values;
+                    if (!age || !creat) return { graft_risk: 'N/A' };
+                    const isDeceasedDonor = this.querySelector('input[name="donor_type"]:checked')?.value === 'yes';
+                    const isRetransplant = this.querySelector('input[name="retransplant"]:checked')?.value === 'yes';
+                    const creat_mgdl = convertUnit(creat, appState.units.creatinine, 'mg/dL');
+                    const mdrd = 175 * Math.pow(creat_mgdl, -1.154) * Math.pow(age, -0.203) * (gender === 'female' ? 0.742 : 1);
+                    let score = 0.02 * age - 0.03 * mdrd + (isDeceasedDonor ? 0.53 : 0) + (isRetransplant ? 0.49 : 0);
+                    const risk = 1 / (1 + Math.exp(-(-2.27 + score))) * 100;
+                    return { graft_risk: `Risque à 5 ans : <span class="font-bold text-3xl text-emerald-600">${risk.toFixed(1)}%</span>` };
+                }
+            }
+        ];
+
+
+        // --- UI HELPER FUNCTIONS ---
+        function inputField(id, label, type, unit = '', placeholder = '') {
+            const value = appState.values[id] || '';
+            let unitSelector = '';
+            if (id === 'creat' || id === 'u_creat') { unitSelector = unitDropdown('creatinine', ['mg/dL', 'µmol/L', 'mg/L']); } 
+            else if (id === 'ca') { unitSelector = unitDropdown('calcium', ['mg/dL', 'mmol/L', 'mg/L']); } 
+            else if (id === 'alb') { unitSelector = unitDropdown('albumin', ['g/dL', 'g/L']); }
+            else if (['urea_p', 'urea_u', 'post_urea'].includes(id)) { unitSelector = unitDropdown('urea', ['mg/dL', 'mmol/L', 'g/L']); }
+            else if (id === 'actual_hb' || id === 'target_hb') { unitSelector = unitDropdown('hb', ['g/dL', 'g/L', 'mmol/L']); }
+            return `<div class="space-y-1.5"><label for="input-${id}" class="text-sm font-medium text-slate-600">${label}</label><div class="flex items-center gap-2"><input type="${type}" id="input-${id}" data-id="${id}" value="${value}" placeholder="${placeholder || '... '}" class="w-full p-2 border border-slate-300 rounded-lg bg-slate-50 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition">${unit ? `<span class="text-sm text-slate-500 font-semibold">${unit}</span>` : unitSelector}</div></div>`;
+        }
+        
+        function unitDropdown(unitType, options) {
+            const currentUnit = appState.units[unitType];
+            const optionElements = options.map(opt => `<option value="${opt}" ${currentUnit === opt ? 'selected' : ''}>${opt}</option>`).join('');
+            return `<div class="relative"><select data-unit-type="${unitType}" class="unit-select w-full p-2 border border-slate-300 rounded-lg bg-slate-50 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 font-semibold text-slate-700">${optionElements}</select></div>`;
+        }
+        
+        function genderDropdown() {
+             const currentGender = appState.values.gender || 'male';
+             const options = [{value: 'male', label: 'Homme'}, {value: 'female', label: 'Femme'}];
+             const optionElements = options.map(opt => `<option value="${opt.value}" ${currentGender === opt.value ? 'selected' : ''}>${opt.label}</option>`).join('');
+             return `<div class="space-y-1.5"><label for="input-gender" class="text-sm font-medium text-slate-600">Sexe</label><div class="relative"><select id="input-gender" data-id="gender" class="unit-select w-full p-2 border border-slate-300 rounded-lg bg-slate-50 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 font-semibold text-slate-700">${optionElements}</select></div></div>`;
+        }
+        
+        function resultDisplay(calcId, resultIds) {
+            const resultsHTML = resultIds.map(id => `<div id="result-${id}" class="text-slate-700 min-h-[1.5rem] leading-tight flex items-center justify-center text-center"></div>`).join('</div><div class="border-t border-emerald-100 my-1 first:border-0 first:my-0"></div><div class="text-slate-700 min-h-[1.5rem] leading-tight flex items-center justify-center text-center"');
+            const infoButtonHTML = `<div class="flex justify-center mt-3"><button class="info-btn-result bg-blue-500 hover:bg-blue-600 text-white rounded-full w-6 h-6 flex items-center justify-center shadow" data-calc-id="${calcId}"><span class="font-bold italic text-red-100 text-sm">i</span></button></div>`;
+            return `<div class="mt-4 p-3 bg-emerald-50 rounded-lg space-y-2 text-center">${resultsHTML}</div>${infoButtonHTML}`;
+        }
+        
+        function convertUnit(value, fromUnit, toUnit) {
+            if (fromUnit === toUnit || !value) return value;
+            const conv = {
+                urea: { 'mmol/L': { 'mg/dL': v => v * 6.006, 'g/L': v => v * 0.06006 }, 'mg/dL': { 'mmol/L': v => v / 6.006, 'g/L': v => v / 100 }, 'g/L': { 'mmol/L': v => v / 0.06006, 'mg/dL': v => v * 100 }},
+                creatinine: { 'µmol/L': { 'mg/dL': v => v / 88.4 }, 'mg/dL': { 'µmol/L': v => v * 88.4 }, 'mg/L': { 'mg/dL': v => v / 10}, 'mg/dL': { 'mg/L': v => v * 10}},
+                calcium: { 'mg/dL': { 'mmol/L': v => v / 4.01 }, 'mmol/L': { 'mg/dL': v => v * 4.01 }, 'mg/L': { 'mmol/L': v => v / 40.1 }, 'mmol/L': { 'mg/L': v => v * 40.1 } },
+                albumin: { 'g/L': { 'g/dL': v => v / 10 }, 'g/dL': { 'g/L': v => v * 10 } },
+                hb: { 'g/L': {'g/dL': v => v / 10}, 'g/dL': {'g/L': v => v * 10}, 'mmol/L': {'g/dL': v => v * 1.611}, 'g/dL': {'mmol/L': v => v / 1.611} }
+            };
+            for (const substance in conv) {
+                if(conv[substance][fromUnit] && conv[substance][fromUnit][toUnit]) return conv[substance][fromUnit][toUnit](value);
+                if(conv[substance][toUnit] && conv[substance][toUnit][fromUnit]) return 1/conv[substance][toUnit][fromUnit](1/value);
+            }
+            return value; 
+        }
+
+        // --- CORE LOGIC & EVENT HANDLERS ---
+        function updateAllCalculators() { document.querySelectorAll('.calculator-card').forEach(card => { if (card.offsetParent !== null) { updateSingleCalculator(card); } }); }
+        function updateSingleCalculator(card) {
+            const calcId = card.id.replace('calc-', '').replace('fav-','');
+            const calcDef = calculators.find(c => c.id === calcId);
+            if (calcDef && typeof calcDef.calculate === 'function') {
+                const results = calcDef.calculate.call(card);
+                Object.keys(results).forEach(resId => { const resultEl = card.querySelector(`#result-${resId}`); if (resultEl) resultEl.innerHTML = results[resId]; });
+                if (calcDef.postRender) calcDef.postRender(card);
+            }
+        }
+        function syncAllInputs() {
+             Object.keys(appState.values).forEach(id => { document.querySelectorAll(`#input-${id}`).forEach(input => { if (input.value != appState.values[id]) { input.value = appState.values[id] || ''; }}); });
+            document.querySelectorAll('input[name="donor_type"], input[name="retransplant"]').forEach(radio => {
+                const stateValue = appState.values[radio.name] || 'no';
+                radio.checked = stateValue === radio.value;
+             });
+             Object.keys(appState.units).forEach(unitType => { document.querySelectorAll(`select[data-unit-type="${unitType}"]`).forEach(select => { if (select.value !== appState.units[unitType]) { select.value = appState.units[unitType]; }}); });
+        }
+        function handleStateChange(e) {
+            const target = e.target; let needsUpdate = false;
+            if (target.dataset.id) { appState.values[target.dataset.id] = target.value; needsUpdate = true; }
+            if (target.dataset.unitType) { appState.units[target.dataset.unitType] = target.value; needsUpdate = true; }
+            if (needsUpdate) { syncAllInputs(); updateAllCalculators(); clearTimeout(window.historyTimeout); window.historyTimeout = setTimeout(saveLastCalculation, 1200, e.target); }
+        }
+        function saveLastCalculation(targetElement) { 
+             if (!targetElement) return;
+            const card = targetElement.closest('.calculator-card'); if (!card) return;
+            const calcId = card.id.replace('calc-', '').replace('fav-',''); const calcDef = calculators.find(c => c.id === calcId); if (!calcDef) return;
+            const results = calcDef.calculate.call(card);
+            const resultText = Object.values(results).map(r => (r || '').toString().replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()).filter(Boolean).join(' | ');
+            if (resultText && !resultText.toLowerCase().includes('n/a')) {
+                const historyEntry = { id: calcId, title: calcDef.title, timestamp: new Date().toISOString(), inputs: { ...appState.values }, units: { ...appState.units }, result: resultText };
+                appState.history.unshift(historyEntry);
+                appState.history = [...new Map(appState.history.map(item => [item.title + item.result, item])).values()].slice(0, 20);
+                localStorage.setItem('nephro_history_v17', JSON.stringify(appState.history));
+                renderHistory();
+            }
+        }
+        function renderCalculators() {
+            const panes = { clinique: document.getElementById('clinique-pane'), dialyse: document.getElementById('dialyse-pane'), transplantation: document.getElementById('transplantation-pane') };
+            Object.values(panes).forEach(p => p.innerHTML = ''); 
+            const appendCard = (calc, container) => {
+                const card = document.createElement('div'); card.id = `calc-${calc.id}`; card.className = 'calculator-card bg-white p-4 rounded-xl shadow-md';
+                card.dataset.tags = calc.tags; card.dataset.title = calc.title;
+                card.innerHTML = `<div class="flex justify-between items-start mb-4"><h2 class="font-bold text-lg text-slate-700">${calc.title}</h2></div><div>${calc.html()}</div>`;
+                container.appendChild(card);
+            };
+            calculators.forEach(calc => { if (panes[calc.pane]) appendCard(calc, panes[calc.pane]); });
+            renderHistory(); syncAllInputs(); updateAllCalculators(); if(window.lucide) { lucide.createIcons(); }
+        }
+       
+        function renderHistory() {
+             const list = document.getElementById('history-list'); list.innerHTML = '';
+             if (appState.history.length === 0) { list.innerHTML = `<div class="text-center text-slate-500 p-6 bg-white rounded-lg"><i data-lucide="list-x" class="w-10 h-10 mx-auto mb-2"></i><p>Aucun calcul dans l'historique.</p></div>`; } 
+             else {
+                 appState.history.forEach(entry => {
+                    const item = document.createElement('div');
+                    item.className = 'bg-white p-3 rounded-lg shadow-sm cursor-pointer hover:bg-slate-50 transition';
+                    item.innerHTML = `<div class="flex justify-between items-center"><p class="font-semibold">${entry.title}</p><p class="text-xs text-slate-400">${new Date(entry.timestamp).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</p></div><p class="text-sm text-emerald-600 mt-1">${entry.result}</p>`;
+                    item.addEventListener('click', () => {
+                        appState.values = { ...entry.inputs }; appState.units = { ...entry.units };
+                        const calcDef = calculators.find(c => c.id === entry.id);
+                        if (calcDef) { document.querySelector(`[data-tab="${calcDef.pane}"]`).click(); }
+                        syncAllInputs(); updateAllCalculators();
+                        setTimeout(() => { const cardToScroll = document.querySelector(`#${calcDef.pane}-pane #calc-${entry.id}`); if(cardToScroll) cardToScroll.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 100);
+                    });
+                    list.appendChild(item);
+                 });
+             }
+             if(window.lucide) { lucide.createIcons(); }
+        }
+        function handleTabSwitch(e) {
+            const button = e.target.closest('.tab-button'); if (!button) return;
+            document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('tab-active'));
+            button.classList.add('tab-active');
+            document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.add('hidden'));
+            document.getElementById(`${button.dataset.tab}-pane`).classList.remove('hidden');
+            updateAllCalculators();
+        }
+        function handleSearch(e) {
+            const query = e.target.value.toLowerCase().trim();
+            document.querySelectorAll('.calculator-card').forEach(card => {
+                if(card.closest('#favoris-pane')) return;
+                const tags = (card.dataset.tags || '').toLowerCase(); const title = (card.dataset.title || '').toLowerCase();
+                card.style.display = (tags.includes(query) || title.includes(query)) ? 'block' : 'none';
+            });
+        }
+        function handleCardActions(e) {
+            const infoBtn = e.target.closest('.info-btn-result');
+            if (infoBtn) { 
+                const calcId = infoBtn.dataset.calcId; const calc = calculators.find(c => c.id === calcId);
+                document.getElementById('modal-title').innerText = `Formules: ${calc.title}`; document.getElementById('modal-content').innerHTML = calc.formula; openModal();
+            }
+             if (e.target.closest('#add-creat-entry')) {
+                const container = e.target.closest('.calculator-card').querySelector('#creat-entries');
+                const newEntry = document.createElement('div'); newEntry.className = 'flex gap-2 items-center';
+                newEntry.innerHTML = `<input type="date" class="creat-date border border-slate-300 p-2 rounded-lg flex-1 bg-slate-50" value="${new Date().toISOString().split('T')[0]}"><input type="number" step="0.01" class="creat-value border border-slate-300 p-2 rounded-lg flex-1 bg-slate-50" placeholder="Valeur"><button class="creat-remove text-red-500 hover:text-red-700 p-2"><i data-lucide="x" class="w-5 h-5"></i></button>`;
+                container.appendChild(newEntry); if(window.lucide) { lucide.createIcons(); }
+            }
+            if (e.target.closest('.creat-remove')) {
+                const card = e.target.closest('.calculator-card'); e.target.closest('.flex.gap-2.items-center').remove();
+                if (card) { calculators.find(c=>c.id === card.id.replace('calc-','').replace('fav-','')).postRender(card) }
+            }
+        }
+        function handleClearHistory() { appState.history = []; localStorage.removeItem('nephro_history_v17'); renderHistory(); }
+        const modal = document.getElementById('formula-modal'); const modalInner = document.getElementById('modal-inner');
+        function openModal() { modal.style.display = 'flex'; setTimeout(() => { modalInner.classList.remove('scale-95', 'opacity-0'); modalInner.classList.add('scale-100', 'opacity-100'); }, 10); }
+        function closeModal() { modalInner.classList.add('scale-95', 'opacity-0'); setTimeout(() => { modal.style.display = 'none'; }, 200); }
+        document.getElementById('close-modal-btn').addEventListener('click', closeModal);
+        modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+        function init() {
+            const contentPanes = document.getElementById('content-panes');
+            document.getElementById('main-tabs').addEventListener('click', handleTabSwitch);
+            document.getElementById('searchInput').addEventListener('input', handleSearch);
+            contentPanes.addEventListener('input', handleStateChange); contentPanes.addEventListener('click', handleCardActions);
+            document.getElementById('clearHistoryBtn').addEventListener('click', handleClearHistory);
+            renderCalculators();
+        }
+        init();
+    });
+    </script>
+</body>
+</html>
