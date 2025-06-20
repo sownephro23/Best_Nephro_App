@@ -1,5 +1,5 @@
 // A simple cache-first service worker
-const CACHE_NAME = 'nephro-calc-v15-cache';
+const CACHE_NAME = 'nephro-calc-v18-cache';
 const urlsToCache = [
   './', // Caches the index.html
   'https://cdn.tailwindcss.com',
@@ -27,10 +27,24 @@ self.addEventListener('fetch', event => {
         if (response) {
           return response;
         }
-        // Not in cache - fetch from network
-        return fetch(event.request);
-      }
-    )
+        // Not in cache - fetch from network, then cache it
+        return fetch(event.request).then(
+          response => {
+            // Check if we received a valid response
+            if(!response || response.status !== 200 || response.type !== 'basic' && !event.request.url.startsWith('https://fonts.gstatic.com')) {
+              return response;
+            }
+
+            const responseToCache = response.clone();
+            caches.open(CACHE_NAME)
+              .then(cache => {
+                cache.put(event.request, responseToCache);
+              });
+
+            return response;
+          }
+        );
+      })
   );
 });
 
