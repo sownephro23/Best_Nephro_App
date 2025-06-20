@@ -12,14 +12,14 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@0.378.0/dist/lucide.min.js"></script>
-    <!-- Google Fonts: Inter -->
+    <!-- Google Fonts: Poppins -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <!-- PWA Manifest -->
     <link rel="manifest" href="./manifest.json">
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #f0f4f8; }
+        body { font-family: 'Poppins', sans-serif; background-color: #f0f4f8; }
         .tab-button {
             transition: all 0.2s ease-in-out;
             color: #475569; /* slate-600 */
@@ -34,6 +34,11 @@
             transition: all 0.2s ease-in-out; 
             background-color: #ffffff;
         }
+        .calculator-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.07), 0 4px 6px -4px rgb(0 0 0 / 0.07);
+        }
+        .favorite-star.favorited { color: #f59e0b; /* amber-500 */ }
         .unit-select {
             -webkit-appearance: none;
             -moz-appearance: none;
@@ -67,6 +72,7 @@
             <button data-tab="clinique" class="tab-button tab-active flex items-center gap-2 px-3 py-2 rounded-lg text-sm md:px-4 md:text-base"><i data-lucide="stethoscope" class="w-5 h-5"></i>Clinique</button>
             <button data-tab="dialyse" class="tab-button flex items-center gap-2 px-3 py-2 rounded-lg text-sm md:px-4 md:text-base"><i data-lucide="droplets" class="w-5 h-5"></i>Dialyse</button>
             <button data-tab="transplantation" class="tab-button flex items-center gap-2 px-3 py-2 rounded-lg text-sm md:px-4 md:text-base"><i data-lucide="heart-pulse" class="w-5 h-5"></i>Transplantation</button>
+            <button data-tab="favoris" class="tab-button flex items-center gap-2 px-3 py-2 rounded-lg text-sm md:px-4 md:text-base"><i data-lucide="star" class="w-5 h-5"></i>Favoris</button>
             <button data-tab="historique" class="tab-button flex items-center gap-2 px-3 py-2 rounded-lg text-sm md:px-4 md:text-base"><i data-lucide="history" class="w-5 h-5"></i>Historique</button>
         </nav>
 
@@ -75,6 +81,7 @@
             <div id="clinique-pane" class="tab-pane grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6"></div>
             <div id="dialyse-pane" class="tab-pane hidden grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6"></div>
             <div id="transplantation-pane" class="tab-pane hidden grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6"></div>
+            <div id="favoris-pane" class="tab-pane hidden grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6"></div>
             <div id="historique-pane" class="tab-pane hidden space-y-4">
                  <div class="flex justify-between items-center bg-white p-3 rounded-lg shadow-sm">
                     <p class="text-sm text-slate-600">Les 20 derniers calculs sont sauvegardés.</p>
@@ -118,7 +125,8 @@
         const appState = {
             values: { gender: 'male' },
             units: { creatinine: 'mg/dL', calcium: 'mg/dL', albumin: 'g/dL', urea: 'mg/dL', hb: 'g/dL' },
-            history: JSON.parse(localStorage.getItem('nephro_history_v18')) || [],
+            favorites: JSON.parse(localStorage.getItem('nephro_favorites_v19')) || [],
+            history: JSON.parse(localStorage.getItem('nephro_history_v19')) || [],
         };
         
         let creatinineChart = null;
@@ -130,7 +138,7 @@
                 title: 'DFG (CKD-EPI 2021)',
                 tags: 'dfg clairance créatinine ckd-epi',
                 pane: 'clinique',
-                html: () => `<div class="grid grid-cols-1 md:grid-cols-2 gap-4">${inputField('age', 'Âge', 'number', 'ans')}${inputField('creat', 'Créatinine', 'number')}${genderDropdown()}</div>${resultDisplay('dfg_clearance', ['dfg'])}`,
+                html: () => `<div class="grid grid-cols-1 md:grid-cols-2 gap-4">${inputField('age', 'Âge', 'number', 'ans')}${inputField('creat', 'Créatinine', 'number')}${genderDropdown()}</div>${resultDisplay(['dfg'])}<div class="mt-4">${actionButtons('dfg_clearance')}</div>`,
                 formula: `<p><b>CKD-EPI 2021 (Créatinine):</b><br>142 x min(SCr/κ, 1)<sup>α</sup> x max(SCr/κ, 1)<sup>-1.200</sup> x 0.9938<sup>Âge</sup> x (1.012 si Femme)</p><p class='text-xs italic mt-2'>Réf: Inker LA, et al. N Engl J Med. 2021.</p>`,
                 calculate: function() {
                     const { age, creat, gender } = appState.values;
@@ -148,7 +156,7 @@
                 title: 'Fraction d\'Excrétion du Sodium (FeNa)',
                 tags: 'fena sodium fraction excrétion urinaire insuffisance rénale aigue ira',
                 pane: 'clinique',
-                html: () => `<div class="grid grid-cols-1 md:grid-cols-2 gap-4">${inputField('na', 'Natrémie (P)', 'number', 'mmol/L')}${inputField('u_na', 'Sodium (U)', 'number', 'mmol/L')}${inputField('creat', 'Créatinine (P)', 'number')}${inputField('u_creat', 'Créatinine (U)', 'number')}</div><p class="text-xs text-center text-slate-500 mt-2">Unité Créat. Urinaire = Créat. Plasmatique (${appState.units.creatinine}).</p>${resultDisplay('fena', ['fena_result', 'fena_interpretation'])}<div class="text-xs text-center text-amber-700 bg-amber-50 p-2 rounded-lg mt-3"><b>Note:</b> Moins fiable chez les patients sous diurétiques.</div>`,
+                html: () => `<div class="grid grid-cols-1 md:grid-cols-2 gap-4">${inputField('na', 'Natrémie (P)', 'number', 'mmol/L')}${inputField('u_na', 'Sodium (U)', 'number', 'mmol/L')}${inputField('creat', 'Créatinine (P)', 'number')}${inputField('u_creat', 'Créatinine (U)', 'number')}</div><p class="text-xs text-center text-slate-500 mt-2">Unité Créat. Urinaire = Créat. Plasmatique (${appState.units.creatinine}).</p>${resultDisplay(['fena_result', 'fena_interpretation'])}<div class="mt-4">${actionButtons('fena')}</div><div class="text-xs text-center text-amber-700 bg-amber-50 p-2 rounded-lg mt-3"><b>Note:</b> Moins fiable chez les patients sous diurétiques.</div>`,
                 formula: 'FeNa (%) = [(Na Urinaire x Créat Plasmatique) / (Na Plasmatique x Créat Urinaire)] x 100',
                 calculate: function() {
                     const { na, u_na, creat, u_creat } = appState.values;
@@ -166,7 +174,7 @@
                 title: 'Déficit en Sodium (Hyponatrémie)',
                 tags: 'sodium deficit hyponatrémie watson ect',
                 pane: 'clinique',
-                html: () => `<div class="text-sm text-center bg-emerald-50 text-emerald-700 p-2 rounded-lg mb-4">Calcul pour hyponatrémie hypovolémique. L'Eau Corporelle Totale (ECT) est estimée par la formule de Watson.</div><div class="grid grid-cols-1 md:grid-cols-2 gap-4">${inputField('weight', 'Poids', 'number', 'kg')}${inputField('height', 'Taille', 'number', 'cm')}${inputField('age', 'Âge', 'number', 'ans')}${genderDropdown()}${inputField('na', 'Natrémie actuelle', 'number', 'mmol/L')}${inputField('target_na', 'Natrémie cible', 'number', 'mmol/L', 135)}</div>${resultDisplay('sodium_deficit', ['na_deficit_mmol', 'na_deficit_g', 'nacl_deficit_g'])}`,
+                html: () => `<div class="text-sm text-center bg-emerald-50 text-emerald-700 p-2 rounded-lg mb-4">Calcul pour hyponatrémie hypovolémique. L'Eau Corporelle Totale (ECT) est estimée par la formule de Watson.</div><div class="grid grid-cols-1 md:grid-cols-2 gap-4">${inputField('weight', 'Poids', 'number', 'kg')}${inputField('height', 'Taille', 'number', 'cm')}${inputField('age', 'Âge', 'number', 'ans')}${genderDropdown()}${inputField('na', 'Natrémie actuelle', 'number', 'mmol/L')}${inputField('target_na', 'Natrémie cible', 'number', 'mmol/L', 135)}</div>${resultDisplay(['na_deficit_mmol', 'na_deficit_g', 'nacl_deficit_g'])}<div class="mt-4">${actionButtons('sodium_deficit')}</div>`,
                 formula: '<b>ECT (Watson) Homme:</b> 2.447 - (0.09156 x Âge) + (0.1074 x Taille cm) + (0.3362 x Poids kg)<br><b>ECT (Watson) Femme:</b> -2.097 + (0.1069 x Taille cm) + (0.2466 x Poids kg)<br><b>Déficit (mmol):</b> (Natrémie Cible - Natrémie Actuelle) x ECT',
                 calculate: function() {
                     const { weight, height, age, na, target_na, gender } = appState.values;
@@ -184,7 +192,7 @@
                 title: 'Calcémie Corrigée',
                 tags: 'calcium albumine protides calcémie corrigée albert isbell payne',
                 pane: 'clinique',
-                html: () => `<div class="grid grid-cols-1 md:grid-cols-2 gap-4">${inputField('ca', 'Calcémie mesurée', 'number')}${inputField('alb', 'Albumine', 'number')}${inputField('prot', 'Protides totaux', 'number', 'g/L')}</div>${resultDisplay('corrected_calcium', ['corrected_ca_standard', 'corrected_ca_old_revised', 'corrected_ca_new_revised'])}`,
+                html: () => `<div class="grid grid-cols-1 md:grid-cols-2 gap-4">${inputField('ca', 'Calcémie mesurée', 'number')}${inputField('alb', 'Albumine', 'number')}${inputField('prot', 'Protides totaux', 'number', 'g/L')}</div>${resultDisplay(['corrected_ca_standard', 'corrected_ca_old_revised', 'corrected_ca_new_revised'])}<div class="mt-4">${actionButtons('corrected_calcium')}</div>`,
                 formula: `<div class='space-y-4'><div><b class='text-slate-700'>1. Formule Standard (Payne):</b><br>Ca Corrigée (mmol/L) = Ca Mesurée (mmol/L) + ((40 - Albumine g/L) * 0.02)</div><div><b class='text-slate-700'>2. Ancienne Formule Révisée (avec Protides):</b><br>Ca Corrigée (mg/dL) = Ca(mes) + 0.49 * (4.4 - Alb) + 0.19 * (8.0 - Protides)<p class='text-xs mt-1 text-slate-500'>Unités: Ca(mes) en mg/dL, Alb en g/dL, Protides en g/dL.</p></div><div><b class='text-slate-700'>3. Nouvelle Formule Révisée (Albert-Isbell, 2023):</b><br>Ca(rév) = Ca(mes) + [(4 - Alb) * (Ca(mes) * 0.052)]<p class='text-xs mt-1 text-slate-500'>Unités: Ca(mes) en mg/dL, Alb en g/dL.</p><p class='text-xs italic text-slate-500'>Réf: Albert SG, Isbell TS. Clinica Chimica Acta. 2023.</p></div></div>`,
                 calculate: function() {
                     const { ca, alb, prot } = appState.values;
@@ -215,7 +223,7 @@
                 title: 'Déficit en Fer (Ganzoni)',
                 tags: 'fer, anémie, carence, ganzoni, dialyse, mrc, anemie',
                 pane: 'clinique',
-                html: () => `<div class="grid grid-cols-1 md:grid-cols-2 gap-4">${inputField('weight', 'Poids', 'number', 'kg')}${inputField('actual_hb', 'Hémoglobine Actuelle', 'number')}${inputField('target_hb', 'Hémoglobine Cible', 'number', '', 11)}</div>${resultDisplay('iron_deficit', ['iron_deficit_result'])}<p class="text-xs text-slate-400 text-center mt-2">Valable pour les patients dialysés et non-dialysés.</p>`,
+                html: () => `<div class="grid grid-cols-1 md:grid-cols-2 gap-4">${inputField('weight', 'Poids', 'number', 'kg')}${inputField('actual_hb', 'Hémoglobine Actuelle', 'number')}${inputField('target_hb', 'Hémoglobine Cible', 'number', '', 11)}</div>${resultDisplay(['iron_deficit_result'])}<div class="mt-4">${actionButtons('iron_deficit')}</div><p class="text-xs text-slate-400 text-center mt-2">Valable pour les patients dialysés et non-dialysés.</p>`,
                 formula: `<b>Déficit en Fer (mg) = Poids (kg) x (Hb Cible - Hb Actuelle) [g/dL] x 2.4 + Réserves en Fer</b><br><br><p class='text-xs italic'>Les réserves en fer sont estimées à 500 mg pour un poids > 35 kg.</p>`,
                 calculate: function() {
                     const { weight, actual_hb, target_hb } = appState.values;
@@ -251,7 +259,7 @@
                 title: 'Fonction Rénale Résiduelle (HD & DP)',
                 tags: 'frr rrf fonction rénale résiduelle dialyse hémodialyse péritonéale clairance urée',
                 pane: 'dialyse',
-                html: () => `<div class="grid grid-cols-1 md:grid-cols-2 gap-4">${inputField('urea_p', 'Urée Plasmatique', 'number')}${inputField('urea_u', 'Urée Urinaire', 'number')}${inputField('creat', 'Créatinine Plasmatique', 'number')}${inputField('u_creat', 'Créatinine Urinaire', 'number')}<div class="md:col-span-2">${inputField('urine_vol_24h', 'Volume Urinaire / 24h', 'number', 'mL')}</div></div><p class="text-xs text-center text-slate-500 mt-2">Les unités Urée/Créat. urinaires doivent être les mêmes que les plasmatiques.</p>${resultDisplay('rrf', ['rrf_result', 'rrf_interpretation'])}`,
+                html: () => `<div class="grid grid-cols-1 md:grid-cols-2 gap-4">${inputField('urea_p', 'Urée Plasmatique', 'number')}${inputField('urea_u', 'Urée Urinaire', 'number')}${inputField('creat', 'Créatinine Plasmatique', 'number')}${inputField('u_creat', 'Créatinine Urinaire', 'number')}<div class="md:col-span-2">${inputField('urine_vol_24h', 'Volume Urinaire / 24h', 'number', 'mL')}</div></div><p class="text-xs text-center text-slate-500 mt-2">Les unités Urée/Créat. urinaires doivent être les mêmes que les plasmatiques.</p>${resultDisplay(['rrf_result', 'rrf_interpretation'])}<div class="mt-4">${actionButtons('rrf')}</div>`,
                 formula: `La FRR est la moyenne des clairances de l'urée et de la créatinine.<br><br><b>Clairance (mL/min) = [Concentration Urinaire x Volume Urinaire (mL)] / [Concentration Plasmatique x 1440 (min)]</b><br><br><b>FRR = (Clairance Urée + Clairance Créatinine) / 2</b>`,
                 calculate: function() {
                     const { urea_p, urea_u, creat, u_creat, urine_vol_24h } = appState.values;
@@ -271,7 +279,7 @@
                 title: 'Kt/V (Daugirdas 2)',
                 tags: 'kt/v daugirdas dialyse urée',
                 pane: 'dialyse',
-                html: () => `<div class="grid grid-cols-1 md:grid-cols-2 gap-4">${inputField('urea_p', 'Urée pré-dialyse', 'number')}${inputField('post_urea', 'Urée post-dialyse', 'number')}${inputField('duration', 'Durée dialyse', 'number', 'heures')}${inputField('uf_volume', 'Volume ultrafiltration', 'number', 'L')}${inputField('post_weight', 'Poids post-dialyse', 'number', 'kg')}</div>${resultDisplay('ktv', ['ktv_result'])}`,
+                html: () => `<div class="grid grid-cols-1 md:grid-cols-2 gap-4">${inputField('urea_p', 'Urée pré-dialyse', 'number')}${inputField('post_urea', 'Urée post-dialyse', 'number')}${inputField('duration', 'Durée dialyse', 'number', 'heures')}${inputField('uf_volume', 'Volume ultrafiltration', 'number', 'L')}${inputField('post_weight', 'Poids post-dialyse', 'number', 'kg')}</div>${resultDisplay(['ktv_result'])}<div class="mt-4">${actionButtons('ktv')}</div>`,
                 formula: 'Kt/V = -ln((Urée Post / Urée Pré) - 0.008 * t) + (4 - 3.5 * (Urée Post / Urée Pré)) * UF / Poids Post',
                 calculate: function() {
                     const { urea_p, post_urea, duration, uf_volume, post_weight } = appState.values;
@@ -286,7 +294,7 @@
                 title: 'Taux de Réduction de l\'Urée (URR)',
                 tags: 'urr dialyse urée',
                 pane: 'dialyse',
-                html: () => `<div class="grid grid-cols-1 md:grid-cols-2 gap-4">${inputField('urea_p', 'Urée pré-dialyse', 'number')}${inputField('post_urea', 'Urée post-dialyse', 'number')}</div>${resultDisplay('urr', ['urr_result'])}`,
+                html: () => `<div class="grid grid-cols-1 md:grid-cols-2 gap-4">${inputField('urea_p', 'Urée pré-dialyse', 'number')}${inputField('post_urea', 'Urée post-dialyse', 'number')}</div>${resultDisplay(['urr_result'])}<div class="mt-4">${actionButtons('urr')}</div>`,
                 formula: 'URR (%) = ((Urée Pré - Urée Post) / Urée Pré) x 100',
                 calculate: function() {
                     const { urea_p, post_urea } = appState.values;
@@ -301,7 +309,7 @@
                 title: 'Risque de Perte du Greffon',
                 tags: 'transplantation greffon rein risque perte',
                 pane: 'transplantation',
-                html: () => `<div class="grid grid-cols-1 md:grid-cols-2 gap-4">${inputField('age', 'Âge', 'number', 'ans')}${inputField('creat', 'Créatinine', 'number')}${genderDropdown()}<div class="space-y-1.5"><label class="text-sm font-medium text-slate-600">Donneur décédé</label><div class="flex rounded-lg border border-slate-300 overflow-hidden"><input type="radio" name="donor_type" id="donor_yes" value="yes" class="sr-only peer/yes"><label for="donor_yes" class="w-1/2 text-center p-2 cursor-pointer peer-checked/yes:bg-emerald-500 peer-checked/yes:text-white transition">Oui</label><input type="radio" name="donor_type" id="donor_no" value="no" class="sr-only peer/no" checked><label for="donor_no" class="w-1/2 text-center p-2 cursor-pointer peer-checked/no:bg-emerald-500 peer-checked/no:text-white transition border-l border-slate-300">Non</label></div></div><div class="space-y-1.5"><label class="text-sm font-medium text-slate-600">Re-transplantation</label><div class="flex rounded-lg border border-slate-300 overflow-hidden"><input type="radio" name="retransplant" id="retransplant_yes" value="yes" class="sr-only peer/re_yes"><label for="retransplant_yes" class="w-1/2 text-center p-2 cursor-pointer peer-checked/re_yes:bg-emerald-500 peer-checked/re_yes:text-white transition">Oui</label><input type="radio" name="retransplant" id="retransplant_no" value="no" class="sr-only peer/re_no" checked><label for="retransplant_no" class="w-1/2 text-center p-2 cursor-pointer peer-checked/re_no:bg-emerald-500 peer-checked/re_no:text-white transition border-l border-slate-300">Non</label></div></div></div>${resultDisplay('graft_loss_risk', ['graft_risk'])}<p class="text-xs text-slate-400 text-center mt-2">Basé sur le modèle de Foucher et al.</p>`,
+                html: () => `<div class="grid grid-cols-1 md:grid-cols-2 gap-4">${inputField('age', 'Âge', 'number', 'ans')}${inputField('creat', 'Créatinine', 'number')}${genderDropdown()}<div class="space-y-1.5"><label class="text-sm font-medium text-slate-600">Donneur décédé</label><div class="flex rounded-lg border border-slate-300 overflow-hidden"><input type="radio" name="donor_type" id="donor_yes" value="yes" class="sr-only peer/yes"><label for="donor_yes" class="w-1/2 text-center p-2 cursor-pointer peer-checked/yes:bg-emerald-500 peer-checked/yes:text-white transition">Oui</label><input type="radio" name="donor_type" id="donor_no" value="no" class="sr-only peer/no" checked><label for="donor_no" class="w-1/2 text-center p-2 cursor-pointer peer-checked/no:bg-emerald-500 peer-checked/no:text-white transition border-l border-slate-300">Non</label></div></div><div class="space-y-1.5"><label class="text-sm font-medium text-slate-600">Re-transplantation</label><div class="flex rounded-lg border border-slate-300 overflow-hidden"><input type="radio" name="retransplant" id="retransplant_yes" value="yes" class="sr-only peer/re_yes"><label for="retransplant_yes" class="w-1/2 text-center p-2 cursor-pointer peer-checked/re_yes:bg-emerald-500 peer-checked/re_yes:text-white transition">Oui</label><input type="radio" name="retransplant" id="retransplant_no" value="no" class="sr-only peer/re_no" checked><label for="retransplant_no" class="w-1/2 text-center p-2 cursor-pointer peer-checked/re_no:bg-emerald-500 peer-checked/re_no:text-white transition border-l border-slate-300">Non</label></div></div></div>${resultDisplay(['graft_risk'])}<div class="mt-4">${actionButtons('graft_loss_risk')}</div><p class="text-xs text-slate-400 text-center mt-2">Basé sur le modèle de Foucher et al.</p>`,
                 formula: 'Score de risque de perte du greffon à 5 ans, basé sur le modèle de Foucher et al. (2010). Le score est calculé à partir de l\'âge du receveur, du DFG (estimé par MDRD), du type de donneur et de la re-transplantation.',
                 calculate: function() {
                     const { age, creat, gender } = appState.values;
@@ -343,12 +351,18 @@
              return `<div class="space-y-1.5"><label for="input-gender" class="text-sm font-medium text-slate-600">Sexe</label><div class="relative"><select id="input-gender" data-id="gender" class="unit-select w-full p-2 border border-slate-300 rounded-lg bg-slate-50 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 font-semibold text-slate-700">${optionElements}</select></div></div>`;
         }
         
-        function resultDisplay(calcId, resultIds) {
-            const resultsHTML = resultIds.map(id => `<div id="result-${id}" class="text-slate-700 min-h-[1.5rem] leading-tight flex items-center justify-center text-center"></div>`).join('</div><div class="border-t border-emerald-100 my-1 first:border-0 first:my-0"></div><div class="text-slate-700 min-h-[1.5rem] leading-tight flex items-center justify-center text-center"');
-            const infoButtonHTML = `<div class="flex justify-center mt-3"><button class="info-btn-result bg-blue-500 hover:bg-blue-600 text-white rounded-full w-6 h-6 flex items-center justify-center shadow" data-calc-id="${calcId}"><span class="font-bold italic text-red-100 text-sm">i</span></button></div>`;
-            return `<div class="mt-4 p-3 bg-emerald-50 rounded-lg space-y-2 text-center">${resultsHTML}</div>${infoButtonHTML}`;
+        function resultDisplay(resultIds) {
+            const resultsHTML = resultIds.map(id => `<div id="result-${id}" class="text-slate-700 min-h-[2.5rem] leading-tight flex items-center justify-center text-center"></div>`).join('</div><div class="border-t border-emerald-100 my-1 first:border-0 first:my-0"></div><div class="text-slate-700 min-h-[1.5rem] leading-tight flex items-center justify-center text-center"');
+            return `<div class="mt-4 p-3 bg-emerald-50/60 rounded-lg space-y-2 text-center">${resultsHTML}</div>`;
         }
         
+        function actionButtons(calcId) {
+            return `<div class="flex justify-center items-center gap-4 mt-4">
+                        <button class="calculate-btn bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-2 px-8 rounded-lg shadow transition-transform transform hover:scale-105" data-calc-id="${calcId}">Calculer</button>
+                        <button class="info-btn-result bg-blue-500 hover:bg-blue-600 text-white rounded-full w-8 h-8 flex items-center justify-center shadow transition-transform transform hover:scale-110" data-calc-id="${calcId}"><span class="font-bold italic text-red-100 text-lg">i</span></button>
+                    </div>`;
+        }
+
         function convertUnit(value, fromUnit, toUnit) {
             if (fromUnit === toUnit || !value) return value;
             const conv = {
@@ -366,13 +380,14 @@
         }
 
         // --- CORE LOGIC & EVENT HANDLERS ---
-        function updateAllCalculators() { document.querySelectorAll('.calculator-card').forEach(card => { if (card.offsetParent !== null) { updateSingleCalculator(card); } }); }
-        function updateSingleCalculator(card) {
+        function updateAllCalculators() { document.querySelectorAll('.calculator-card').forEach(card => { if (card.offsetParent !== null) { updateSingleCalculator(card, false); } }); }
+        function updateSingleCalculator(card, shouldSave = true) {
             const calcId = card.id.replace('calc-', '').replace('fav-','');
             const calcDef = calculators.find(c => c.id === calcId);
             if (calcDef && typeof calcDef.calculate === 'function') {
                 const results = calcDef.calculate.call(card);
                 Object.keys(results).forEach(resId => { const resultEl = card.querySelector(`#result-${resId}`); if (resultEl) resultEl.innerHTML = results[resId]; });
+                if (shouldSave) saveLastCalculation(card);
                 if (calcDef.postRender) calcDef.postRender(card);
             }
         }
@@ -388,11 +403,10 @@
             const target = e.target; let needsUpdate = false;
             if (target.dataset.id) { appState.values[target.dataset.id] = target.value; needsUpdate = true; }
             if (target.dataset.unitType) { appState.units[target.dataset.unitType] = target.value; needsUpdate = true; }
-            if (needsUpdate) { syncAllInputs(); updateAllCalculators(); clearTimeout(window.historyTimeout); window.historyTimeout = setTimeout(saveLastCalculation, 1200, e.target); }
+            if (needsUpdate) { syncAllInputs(); }
         }
-        function saveLastCalculation(targetElement) { 
-             if (!targetElement) return;
-            const card = targetElement.closest('.calculator-card'); if (!card) return;
+        function saveLastCalculation(card) { 
+            if (!card) return;
             const calcId = card.id.replace('calc-', '').replace('fav-',''); const calcDef = calculators.find(c => c.id === calcId); if (!calcDef) return;
             const results = calcDef.calculate.call(card);
             const resultText = Object.values(results).map(r => (r || '').toString().replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()).filter(Boolean).join(' | ');
@@ -400,7 +414,7 @@
                 const historyEntry = { id: calcId, title: calcDef.title, timestamp: new Date().toISOString(), inputs: { ...appState.values }, units: { ...appState.units }, result: resultText };
                 appState.history.unshift(historyEntry);
                 appState.history = [...new Map(appState.history.map(item => [item.title + item.result, item])).values()].slice(0, 20);
-                localStorage.setItem('nephro_history_v17', JSON.stringify(appState.history));
+                localStorage.setItem('nephro_history_v18', JSON.stringify(appState.history));
                 renderHistory();
             }
         }
@@ -448,13 +462,18 @@
         function handleSearch(e) {
             const query = e.target.value.toLowerCase().trim();
             document.querySelectorAll('.calculator-card').forEach(card => {
-                if(card.closest('#favoris-pane')) return;
                 const tags = (card.dataset.tags || '').toLowerCase(); const title = (card.dataset.title || '').toLowerCase();
                 card.style.display = (tags.includes(query) || title.includes(query)) ? 'block' : 'none';
             });
         }
         function handleCardActions(e) {
             const infoBtn = e.target.closest('.info-btn-result');
+            const calcBtn = e.target.closest('.calculate-btn');
+
+            if (calcBtn) {
+                const card = calcBtn.closest('.calculator-card');
+                updateSingleCalculator(card, true);
+            }
             if (infoBtn) { 
                 const calcId = infoBtn.dataset.calcId; const calc = calculators.find(c => c.id === calcId);
                 document.getElementById('modal-title').innerText = `Formules: ${calc.title}`; document.getElementById('modal-content').innerHTML = calc.formula; openModal();
@@ -467,10 +486,10 @@
             }
             if (e.target.closest('.creat-remove')) {
                 const card = e.target.closest('.calculator-card'); e.target.closest('.flex.gap-2.items-center').remove();
-                if (card) { calculators.find(c=>c.id === card.id.replace('calc-','').replace('fav-','')).postRender(card) }
+                if (card) { calculators.find(c=>c.id === card.id.replace('calc-','')).postRender(card) }
             }
         }
-        function handleClearHistory() { appState.history = []; localStorage.removeItem('nephro_history_v17'); renderHistory(); }
+        function handleClearHistory() { appState.history = []; localStorage.removeItem('nephro_history_v18'); renderHistory(); }
         const modal = document.getElementById('formula-modal'); const modalInner = document.getElementById('modal-inner');
         function openModal() { modal.style.display = 'flex'; setTimeout(() => { modalInner.classList.remove('scale-95', 'opacity-0'); modalInner.classList.add('scale-100', 'opacity-100'); }, 10); }
         function closeModal() { modalInner.classList.add('scale-95', 'opacity-0'); setTimeout(() => { modal.style.display = 'none'; }, 200); }
