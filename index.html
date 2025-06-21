@@ -38,7 +38,6 @@
             transform: translateY(-4px);
             box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.07), 0 4px 6px -4px rgb(0 0 0 / 0.07);
         }
-        .favorite-star.favorited { color: #f59e0b; /* amber-500 */ }
         .unit-select {
             -webkit-appearance: none;
             -moz-appearance: none;
@@ -72,7 +71,7 @@
             <button data-tab="clinique" class="tab-button tab-active flex items-center gap-2 px-3 py-2 rounded-lg text-sm md:px-4 md:text-base"><i data-lucide="stethoscope" class="w-5 h-5"></i>Clinique</button>
             <button data-tab="dialyse" class="tab-button flex items-center gap-2 px-3 py-2 rounded-lg text-sm md:px-4 md:text-base"><i data-lucide="droplets" class="w-5 h-5"></i>Dialyse</button>
             <button data-tab="transplantation" class="tab-button flex items-center gap-2 px-3 py-2 rounded-lg text-sm md:px-4 md:text-base"><i data-lucide="heart-pulse" class="w-5 h-5"></i>Transplantation</button>
-            <button data-tab="favoris" class="tab-button flex items-center gap-2 px-3 py-2 rounded-lg text-sm md:px-4 md:text-base"><i data-lucide="star" class="w-5 h-5"></i>Favoris</button>
+            <button data-tab="ia" class="tab-button flex items-center gap-2 px-3 py-2 rounded-lg text-sm md:px-4 md:text-base"><i data-lucide="brain-circuit" class="w-5 h-5"></i>IA</button>
             <button data-tab="historique" class="tab-button flex items-center gap-2 px-3 py-2 rounded-lg text-sm md:px-4 md:text-base"><i data-lucide="history" class="w-5 h-5"></i>Historique</button>
         </nav>
 
@@ -81,7 +80,7 @@
             <div id="clinique-pane" class="tab-pane grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6"></div>
             <div id="dialyse-pane" class="tab-pane hidden grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6"></div>
             <div id="transplantation-pane" class="tab-pane hidden grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6"></div>
-            <div id="favoris-pane" class="tab-pane hidden grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6"></div>
+            <div id="ia-pane" class="tab-pane hidden grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6"></div>
             <div id="historique-pane" class="tab-pane hidden space-y-4">
                  <div class="flex justify-between items-center bg-white p-3 rounded-lg shadow-sm">
                     <p class="text-sm text-slate-600">Les 20 derniers calculs sont sauvegardés.</p>
@@ -94,7 +93,7 @@
         <!-- Footer -->
         <footer class="text-center mt-8 py-4">
             <p class="text-sm text-slate-500">Ibrahima Sow IDH Néphrologie</p>
-            <p class="text-xs text-slate-400">Dernière mise à jour : 20 juin 2025</p>
+            <p class="text-xs text-slate-400">Dernière mise à jour : 21 juin 2025</p>
         </footer>
 
     </div>
@@ -124,15 +123,59 @@
     document.addEventListener('DOMContentLoaded', () => {
         const appState = {
             values: { gender: 'male' },
-            units: { creatinine: 'mg/dL', calcium: 'mg/dL', albumin: 'g/dL', urea: 'mg/dL', hb: 'g/dL' },
-            favorites: JSON.parse(localStorage.getItem('nephro_favorites_v19')) || [],
-            history: JSON.parse(localStorage.getItem('nephro_history_v19')) || [],
+            units: { creatinine: 'mg/dL', calcium: 'mg/dL', albumin: 'g/dL', urea: 'mg/dL', hb: 'g/dL', glucose: 'mg/dL', pth: 'pg/mL' },
+            history: JSON.parse(localStorage.getItem('nephro_history_v41')) || [],
         };
         
         let creatinineChart = null;
 
         const calculators = [
             // === CLINIQUE ===
+            {
+                id: 'unit_converter',
+                title: 'Convertisseur d\'Unités',
+                tags: 'conversion, unités, convertisseur',
+                pane: 'clinique',
+                html: () => `<div class="space-y-4" id="converter-body"></div>`,
+                calculate: () => ({}),
+                postRender: function(card) {
+                    const container = card.querySelector('#converter-body');
+                    if (container.children.length > 0) return; 
+
+                    const substances = [
+                        { name: 'Urée', key: 'urea', units: ['mg/dL', 'mmol/L', 'g/L'] },
+                        { name: 'Créatinine', key: 'creatinine', units: ['mg/dL', 'µmol/L', 'mg/L'] },
+                        { name: 'Calcémie', key: 'calcium', units: ['mg/dL', 'mmol/L', 'mg/L'] },
+                        { name: 'Glycémie', key: 'glucose', units: ['mg/dL', 'mmol/L', 'g/L'] },
+                        { name: 'PTHi', key: 'pth', units: ['pg/mL', 'pmol/L'] },
+                    ];
+
+                    const createConverterRow = (sub) => {
+                        return `
+                            <div class="space-y-2">
+                                <label class="font-semibold text-slate-600">${sub.name}</label>
+                                <div class="grid grid-cols-1 sm:grid-cols-[1fr_auto_1fr] items-center gap-2">
+                                    <div class="flex gap-2">
+                                        <input type="number" data-converter-input="${sub.key}" data-converter-idx="1" class="w-full p-2 border border-slate-300 rounded-lg bg-slate-50 focus:ring-2 focus:ring-emerald-500">
+                                        <select data-converter-select="${sub.key}" data-converter-idx="1" class="unit-select p-2 border border-slate-300 rounded-lg bg-slate-50 font-semibold">
+                                            ${sub.units.map(u => `<option value="${u}">${u}</option>`).join('')}
+                                        </select>
+                                    </div>
+                                    <div class="text-center font-bold text-slate-500">=</div>
+                                    <div class="flex gap-2">
+                                        <input type="number" data-converter-input="${sub.key}" data-converter-idx="2" class="w-full p-2 border border-slate-300 rounded-lg bg-slate-50 focus:ring-2 focus:ring-emerald-500">
+                                        <select data-converter-select="${sub.key}" data-converter-idx="2" class="unit-select p-2 border border-slate-300 rounded-lg bg-slate-50 font-semibold">
+                                            ${sub.units.map((u, i) => `<option value="${u}" ${i === 1 ? 'selected' : ''}>${u}</option>`).join('')}
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    };
+                    
+                    container.innerHTML = substances.map(createConverterRow).join('');
+                }
+            },
             {
                 id: 'dfg_clearance',
                 title: 'DFG (CKD-EPI 2021)',
@@ -143,12 +186,141 @@
                 calculate: function() {
                     const { age, creat, gender } = appState.values;
                     if (!age || !creat) return { dfg: 'N/A' };
-                    let creat_mgdl = convertUnit(creat, appState.units.creatinine, 'mg/dL');
-                    if (!creat_mgdl) return { dfg: 'N/A' };
+                    let creat_mgdl = convertUnit('creatinine', creat, appState.units.creatinine, 'mg/dL');
+                    if (isNaN(creat_mgdl)) return { dfg: 'N/A' };
                     const k = gender === 'female' ? 0.7 : 0.9;
                     const a = gender === 'female' ? -0.241 : -0.302;
                     const gfr = 142 * Math.pow(Math.min(creat_mgdl / k, 1), a) * Math.pow(Math.max(creat_mgdl / k, 1), -1.200) * Math.pow(0.9938, age) * (gender === 'female' ? 1.012 : 1);
                     return { dfg: `<span class="font-bold text-3xl text-emerald-600">${Math.round(gfr)}</span> mL/min/1.73m²` };
+                }
+            },
+            {
+                id: 'kdigo_aki',
+                title: 'Définition IRA (KDIGO)',
+                tags: 'kdigo, ira, insuffisance renale aigue, creatinine, diurese',
+                pane: 'clinique',
+                html: () => `
+                    <div>
+                        <div class="mb-4">
+                            <h4 class="font-semibold mb-2 text-slate-600">Critères sur la Créatininémie</h4>
+                             <div class="flex items-center gap-2 mb-2">
+                                <label for="kdigo_creat_unit" class="text-sm font-medium">Unité Créat.</label>
+                                ${unitDropdown('creatinine', ['mg/dL', 'µmol/L', 'mg/L'])}
+                            </div>
+                            <div id="kdigo-creat-entries" class="space-y-2">
+                                <!-- Dynamic entries here -->
+                            </div>
+                            <button id="add-kdigo-creat-entry" class="text-sm font-semibold text-emerald-600 flex items-center gap-1 mt-2"><i data-lucide="plus-circle" class="w-4 h-4"></i>Ajouter une mesure</button>
+                        </div>
+                        <div class="mb-4 border-t pt-4">
+                             <h4 class="font-semibold mb-2 text-slate-600">Critère sur la Diurèse</h4>
+                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                ${inputField('urine_vol_kdigo', 'Volume Urinaire', 'number', 'mL')}
+                                ${inputField('urine_hours_kdigo', 'Durée du recueil', 'number', 'heures')}
+                                ${inputField('weight', 'Poids du patient', 'number', 'kg')}
+                             </div>
+                        </div>
+                         ${resultDisplay(['kdigo_result'])}
+                         <div class="mt-4">${actionButtons('kdigo_aki')}</div>
+                    </div>
+                `,
+                formula: `<b>Critères KDIGO pour l'IRA:</b><br>
+                <ul class="list-disc ml-5 mt-2 text-xs">
+                    <li>↑ Créatinine ≥ 0.3 mg/dL (26.5 µmol/L) en 48h</li>
+                    <li>↑ Créatinine ≥ 1.5x la valeur de base (connue ou présumée dans les 7 jours)</li>
+                    <li>Diurèse < 0.5 mL/kg/h pendant 6 heures</li>
+                </ul>`,
+                calculate: function() { /* Logic handled in specific button click */ return { kdigo_result: '' }; },
+                postRender: function(card) {
+                    renderKdigoCreatinineEntries(card);
+                }
+            },
+            {
+                id: 'urea_creat_ratio',
+                title: 'Rapport Urée / Créatinine',
+                tags: 'urée, créatinine, rapport, ira, fonctionnelle, organique, bun',
+                pane: 'clinique',
+                html: () => `<div class="grid grid-cols-1 md:grid-cols-2 gap-4">${inputField('urea_p', 'Urée Plasmatique', 'number')}${inputField('creat', 'Créatinine Plasmatique', 'number')}</div><p class="text-xs text-center text-slate-500 mt-2">Le calcul utilise l'urée en mmol/L et la créatinine en µmol/L.</p>${resultDisplay(['ratio_result', 'ratio_interpretation'])}<div class="mt-4">${actionButtons('urea_creat_ratio')}</div>`,
+                formula: `<b>Rapport = (Urée en mmol/L × 1000) / Créatinine en µmol/L</b>`,
+                calculate: function() {
+                    const { urea_p, creat } = appState.values;
+                    if (!urea_p || !creat) return { ratio_result: 'N/A', ratio_interpretation: '' };
+                    const urea_mmol = convertUnit('urea', urea_p, appState.units.urea, 'mmol/L');
+                    const creat_umol = convertUnit('creatinine', creat, appState.units.creatinine, 'µmol/L');
+                    if (isNaN(urea_mmol) || isNaN(creat_umol)) return { ratio_result: 'N/A', ratio_interpretation: '' };
+                    const ratio = 1000 * urea_mmol / creat_umol;
+                    let interpretation, color;
+                    if (ratio > 100) { interpretation = "IRA d'allure fonctionnelle"; color = 'text-orange-600'; } 
+                    else if (ratio < 50) { interpretation = "IRA d'allure organique"; color = 'text-red-600'; } 
+                    else { interpretation = 'Zone grise / non-spécifique'; color = 'text-slate-600'; }
+                    return { ratio_result: `<span class="font-bold text-3xl text-emerald-600">${ratio.toFixed(1)}</span>`, ratio_interpretation: `<span class="font-semibold ${color}">${interpretation}</span>` };
+                }
+            },
+             {
+                id: 'feu',
+                title: 'Fraction d\'Excrétion de l\'Urée (FeU)',
+                tags: 'feu urée fraction excrétion urinaire',
+                pane: 'clinique',
+                html: () => `<div class="grid grid-cols-1 md:grid-cols-2 gap-4">${inputField('urea_p', 'Urée Plasmatique', 'number')}${inputField('urea_u', 'Urée Urinaire', 'number')}${inputField('creat', 'Créatinine Plasmatique', 'number')}${inputField('u_creat', 'Créatinine Urinaire', 'number')}</div><p class="text-xs text-center text-slate-500 mt-2">Les unités Urée/Créat. doivent être les mêmes que les plasmatiques.</p>${resultDisplay(['feu_result'])}<div class="mt-4">${actionButtons('feu')}</div>`,
+                formula: `<b>FeU (%) = [(Urée Urinaire x Créat Plasmatique) / (Urée Plasmatique x Créat Urinaire)] x 100</b>`,
+                calculate: function() {
+                    const { urea_p, urea_u, creat, u_creat } = appState.values;
+                    if (!urea_p || !urea_u || !creat || !u_creat) return { feu_result: 'N/A' };
+                    const urea_p_base = convertUnit('urea', urea_p, appState.units.urea, 'mg/dL');
+                    const urea_u_base = convertUnit('urea', urea_u, appState.units.urea, 'mg/dL');
+                    const creat_p_base = convertUnit('creatinine', creat, appState.units.creatinine, 'mg/dL');
+                    const creat_u_base = convertUnit('creatinine', u_creat, appState.units.creatinine, 'mg/dL');
+                    
+                    if (isNaN(urea_p_base) || isNaN(urea_u_base) || isNaN(creat_p_base) || isNaN(creat_u_base) || urea_p_base === 0 || creat_u_base === 0) return { feu_result: 'N/A' };
+
+                    const feu = ((urea_u_base * creat_p_base) / (urea_p_base * creat_u_base)) * 100;
+                    return { feu_result: `<span class="font-bold text-3xl text-emerald-600">${feu.toFixed(1)} %</span>` };
+                }
+            },
+            {
+                id: 'osm_plasmique',
+                title: 'Osmolarité Plasmatique Calculée',
+                tags: 'osmolarité, plasma, trou osmolaire',
+                pane: 'clinique',
+                html: () => `<div class="grid grid-cols-1 md:grid-cols-2 gap-4">${inputField('na', 'Sodium', 'number', 'mmol/L')}${inputField('k', 'Potassium', 'number', 'mmol/L')}${inputField('glucose', 'Glycémie', 'number')}${inputField('urea_p', 'Urée', 'number')}</div>${resultDisplay(['osm_p_result'])}<div class="mt-4">${actionButtons('osm_plasmique')}</div>`,
+                formula: '<b>Osmolarité Plasmatique (mOsm/kg) = 2 x (Na⁺ + K⁺) + Glucose + Urée</b><br><p class="text-xs italic mt-1">Toutes les valeurs doivent être en mmol/L.</p>',
+                calculate: function() {
+                    const { na, k, glucose, urea_p } = appState.values;
+                    if (!na || !k || !glucose || !urea_p) return { osm_p_result: 'N/A' };
+                    const glucose_mmol = convertUnit('glucose', glucose, appState.units.glucose, 'mmol/L');
+                    const urea_mmol = convertUnit('urea', urea_p, appState.units.urea, 'mmol/L');
+                    const osm = 2 * (parseFloat(na) + parseFloat(k)) + glucose_mmol + urea_mmol;
+                    return { osm_p_result: `<span class="font-bold text-3xl text-emerald-600">${osm.toFixed(1)}</span> mOsm/kg H₂O`};
+                }
+            },
+            {
+                id: 'osm_urinaire_calc',
+                title: 'Osmolarité Urinaire Calculée',
+                tags: 'osmolarité, urinaire, calculée, urine',
+                pane: 'clinique',
+                html: () => `<div class="grid grid-cols-1 md:grid-cols-2 gap-4">${inputField('u_na', 'Sodium Urinaire', 'number', 'mmol/L')}${inputField('u_k', 'Potassium Urinaire', 'number', 'mmol/L')}${inputField('urea_u', 'Urée Urinaire', 'number')}</div>${resultDisplay(['osm_u_calc_result'])}<div class="mt-4">${actionButtons('osm_urinaire_calc')}</div>`,
+                formula: '<b>Osmolarité Urinaire (mOsm/kg) = 2 x (Na⁺ᵤ + K⁺ᵤ) + Uréeᵤ</b><br><p class="text-xs italic mt-1">Toutes les valeurs doivent être en mmol/L.</p>',
+                calculate: function() {
+                    const { u_na, u_k, urea_u } = appState.values;
+                    if (!u_na || !u_k || !urea_u) return { osm_u_calc_result: 'N/A' };
+                    const urea_u_mmol = convertUnit('urea', urea_u, appState.units.urea, 'mmol/L');
+                    const osm = 2 * (parseFloat(u_na) + parseFloat(u_k)) + urea_u_mmol;
+                    return { osm_u_calc_result: `<span class="font-bold text-3xl text-emerald-600">${osm.toFixed(1)}</span> mOsm/kg H₂O`};
+                }
+            },
+            {
+                id: 'osm_urinaire_est',
+                title: 'Osmolarité Urinaire Estimée',
+                tags: 'osmolarité, urinaire, estimée, densité, urine',
+                pane: 'clinique',
+                html: () => `<div class="grid grid-cols-1">${inputField('density_u', 'Densité Urinaire', 'number','', 1.010)}</div>${resultDisplay(['osm_u_est_result'])}<div class="mt-4">${actionButtons('osm_urinaire_est')}</div>`,
+                formula: '<b>Osmolarité Urinaire (mOsm/kg) ≈ (Densité Urinaire - 1000) * 35</b><br><p class="text-xs italic mt-1">La densité est exprimée en g/L (ex: 1.010 devient 1010).</p>',
+                calculate: function() {
+                    const { density_u } = appState.values;
+                    if (!density_u) return { osm_u_est_result: 'N/A' };
+                    const density = parseFloat(density_u) * 1000;
+                    const osm = (density - 1000) * 35;
+                    return { osm_u_est_result: `<span class="font-bold text-3xl text-emerald-600">${osm.toFixed(0)}</span> mOsm/kg H₂O`};
                 }
             },
             {
@@ -161,7 +333,9 @@
                 calculate: function() {
                     const { na, u_na, creat, u_creat } = appState.values;
                     if (!na || !u_na || !creat || !u_creat) { return { fena_result: 'N/A', fena_interpretation: '' }; }
-                    const fena = ((u_na * creat) / (na * u_creat)) * 100;
+                    const creat_mgdl = convertUnit('creatinine', creat, appState.units.creatinine, 'mg/dL');
+                    const u_creat_mgdl = convertUnit('creatinine', u_creat, appState.units.creatinine, 'mg/dL');
+                    const fena = ((u_na * creat_mgdl) / (na * u_creat_mgdl)) * 100;
                     let interpretation, color;
                     if (fena < 1) { interpretation = 'Suggère une cause pré-rénale.'; color = 'text-green-700'; }
                     else if (fena > 2) { interpretation = 'Suggère une nécrose tubulaire aiguë.'; color = 'text-red-700'; }
@@ -175,7 +349,7 @@
                 tags: 'sodium deficit hyponatrémie watson ect',
                 pane: 'clinique',
                 html: () => `<div class="text-sm text-center bg-emerald-50 text-emerald-700 p-2 rounded-lg mb-4">Calcul pour hyponatrémie hypovolémique. L'Eau Corporelle Totale (ECT) est estimée par la formule de Watson.</div><div class="grid grid-cols-1 md:grid-cols-2 gap-4">${inputField('weight', 'Poids', 'number', 'kg')}${inputField('height', 'Taille', 'number', 'cm')}${inputField('age', 'Âge', 'number', 'ans')}${genderDropdown()}${inputField('na', 'Natrémie actuelle', 'number', 'mmol/L')}${inputField('target_na', 'Natrémie cible', 'number', 'mmol/L', 135)}</div>${resultDisplay(['na_deficit_mmol', 'na_deficit_g', 'nacl_deficit_g'])}<div class="mt-4">${actionButtons('sodium_deficit')}</div>`,
-                formula: '<b>ECT (Watson) Homme:</b> 2.447 - (0.09156 x Âge) + (0.1074 x Taille cm) + (0.3362 x Poids kg)<br><b>ECT (Watson) Femme:</b> -2.097 + (0.1069 x Taille cm) + (0.2466 x Poids kg)<br><b>Déficit (mmol):</b> (Natrémie Cible - Natrémie Actuelle) x ECT',
+                formula: '<b>ECT (Watson) Homme:</b> 2.447 - (0.09156 x Âge) + (0.1074 x Taille cm) + (0.3362 x Poids kg)<br><b>ECT (Watson) Femme:</b> -2.097 + (0.1069 * height) + (0.2466 * weight)<br><b>Déficit (mmol):</b> (Natrémie Cible - Natrémie Actuelle) x ECT',
                 calculate: function() {
                     const { weight, height, age, na, target_na, gender } = appState.values;
                     if (!weight || !height || !age || !na || !target_na) return { na_deficit_mmol: 'N/A' };
@@ -198,22 +372,22 @@
                     const { ca, alb, prot } = appState.values;
                     const selectedUnit = appState.units.calcium;
                     if (!ca || !alb) { return { corrected_ca_standard: `Standard: <span class="font-bold">N/A</span>`, corrected_ca_old_revised: `Anc. Révisée: <span class="font-bold">N/A</span>`, corrected_ca_new_revised: `Nouv. Révisée: <span class="font-bold text-emerald-600">N/A</span>` }; }
-                    const ca_mmol_input = convertUnit(ca, selectedUnit, 'mmol/L');
-                    const ca_mgdl_input = convertUnit(ca, selectedUnit, 'mg/dL');
-                    const alb_gl_input = convertUnit(alb, appState.units.albumin, 'g/L');
-                    const alb_gdl_input = convertUnit(alb, appState.units.albumin, 'g/dL');
+                    const ca_mmol_input = convertUnit('calcium', ca, selectedUnit, 'mmol/L');
+                    const ca_mgdl_input = convertUnit('calcium', ca, selectedUnit, 'mg/dL');
+                    const alb_gl_input = convertUnit('albumin', alb, appState.units.albumin, 'g/L');
+                    const alb_gdl_input = convertUnit('albumin', alb, appState.units.albumin, 'g/dL');
                     const standard_result_mmol = ca_mmol_input + ((40 - alb_gl_input) * 0.02);
-                    const final_standard_result = convertUnit(standard_result_mmol, 'mmol/L', selectedUnit);
+                    const final_standard_result = convertUnit('calcium', standard_result_mmol, 'mmol/L', selectedUnit);
                     const standard_display = `${final_standard_result.toFixed(2)} <span class="text-base">${selectedUnit}</span>`;
                     let old_revised_display = 'N/A (Protides manquants)';
                     if (prot) {
                         const prot_gdl_input = prot / 10;
                         const old_revised_result_mgdl = ca_mgdl_input + 0.49 * (4.4 - alb_gdl_input) + 0.19 * (8.0 - prot_gdl_input);
-                        const final_old_revised_result = convertUnit(old_revised_result_mgdl, 'mg/dL', selectedUnit);
+                        const final_old_revised_result = convertUnit('calcium', old_revised_result_mgdl, 'mg/dL', selectedUnit);
                         old_revised_display = `${final_old_revised_result.toFixed(2)} <span class="text-base">${selectedUnit}</span>`;
                     }
                     const new_revised_result_mgdl = ca_mgdl_input + ((4 - alb_gdl_input) * (ca_mgdl_input * 0.052));
-                    const final_new_revised_result = convertUnit(new_revised_result_mgdl, 'mg/dL', selectedUnit);
+                    const final_new_revised_result = convertUnit('calcium', new_revised_result_mgdl, 'mg/dL', selectedUnit);
                     const new_revised_display = `${final_new_revised_result.toFixed(2)} <span class="text-base">${selectedUnit}</span>`;
                     return { corrected_ca_standard: `Standard: <span class="font-bold">${standard_display}</span>`, corrected_ca_old_revised: `Anc. Révisée: <span class="font-bold">${old_revised_display}</span>`, corrected_ca_new_revised: `Nouv. Révisée: <span class="font-bold text-emerald-600">${new_revised_display}</span>` };
                 }
@@ -229,8 +403,8 @@
                     const { weight, actual_hb, target_hb } = appState.values;
                     const hbUnit = appState.units.hb;
                     if(!weight || !actual_hb || !target_hb) return { iron_deficit_result: 'N/A'};
-                    const actual_hb_gdl = convertUnit(actual_hb, hbUnit, 'g/dL');
-                    const target_hb_gdl = convertUnit(target_hb, hbUnit, 'g/dL');
+                    const actual_hb_gdl = convertUnit('hb', actual_hb, hbUnit, 'g/dL');
+                    const target_hb_gdl = convertUnit('hb', target_hb, hbUnit, 'g/dL');
                     const hb_diff = target_hb_gdl - actual_hb_gdl;
                     if(hb_diff <= 0) return { iron_deficit_result: 'Aucun déficit calculé.'};
                     const iron_stores = weight > 35 ? 500 : 15 * weight;
@@ -239,18 +413,47 @@
                 }
             },
             {
-                id: 'creat_graph',
-                title: 'Graphique Créatininémie',
-                tags: 'graphique créatinine évolution',
+                id: 'cv_risk',
+                title: 'Risque Cardiovasculaire (Framingham)',
+                tags: 'risque, cardiovasculaire, framingham, score, mrc',
                 pane: 'clinique',
-                html: () => `<div class="space-y-3"><div id="creat-entries" class="space-y-2"><div class="flex gap-2 items-center"><input type="date" class="creat-date border border-slate-300 p-2 rounded-lg flex-1 bg-slate-50" value="${new Date().toISOString().split('T')[0]}"><input type="number" step="0.01" class="creat-value border border-slate-300 p-2 rounded-lg flex-1 bg-slate-50" placeholder="Valeur"><button class="creat-remove text-red-500 hover:text-red-700 p-2"><i data-lucide="x" class="w-5 h-5"></i></button></div></div><button id="add-creat-entry" class="text-sm font-semibold text-emerald-600 flex items-center gap-1"><i data-lucide="plus-circle" class="w-4 h-4"></i>Ajouter une entrée</button></div><div class="mt-4 bg-slate-50 p-2 rounded-lg"><canvas id="creatinine-chart-canvas"></canvas></div>`,
-                formula: 'Représentation graphique des valeurs de créatininémie saisies au fil du temps pour visualiser une tendance.',
-                calculate: () => ({}),
-                postRender: function(card) {
-                     const ctx = card.querySelector('#creatinine-chart-canvas').getContext('2d');
-                     if (creatinineChart) creatinineChart.destroy();
-                     const entries = Array.from(card.querySelectorAll('#creat-entries > div')).map(row => ({ date: row.querySelector('.creat-date').value, value: parseFloat(row.querySelector('.creat-value').value) })).filter(e => e.date && !isNaN(e.value)).sort((a,b) => new Date(a.date) - new Date(b.date));
-                     creatinineChart = new Chart(ctx, { type: 'line', data: { labels: entries.map(e => new Date(e.date).toLocaleDateString('fr-FR')), datasets: [{ label: `Créatininémie (${appState.units.creatinine})`, data: entries.map(e => e.value), borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.1)', tension: 0.1, fill: true }] }, options: { responsive: true, maintainAspectRatio: true } });
+                html: () => `
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        ${genderDropdown()}
+                        ${inputField('age', 'Âge', 'number', 'ans')}
+                        ${inputField('total_chol', 'Cholestérol Total', 'number', 'mg/dL')}
+                        ${inputField('hdl_chol', 'HDL Cholestérol', 'number', 'mg/dL')}
+                        ${inputField('sbp', 'Pression Artérielle Systolique', 'number', 'mmHg')}
+                        <div class="space-y-1.5"><label class="text-sm font-medium text-slate-600">Fumeur</label><div class="flex rounded-lg border border-slate-300 overflow-hidden"><input type="radio" name="smoker" id="smoker_yes" value="1" class="sr-only peer/yes"><label for="smoker_yes" class="w-1/2 text-center p-2 cursor-pointer peer-checked/yes:bg-emerald-500 peer-checked/yes:text-white transition">Oui</label><input type="radio" name="smoker" id="smoker_no" value="0" class="sr-only peer/no" checked><label for="smoker_no" class="w-1/2 text-center p-2 cursor-pointer peer-checked/no:bg-emerald-500 peer-checked/no:text-white transition border-l">Non</label></div></div>
+                        <div class="space-y-1.5"><label class="text-sm font-medium text-slate-600">Traité pour HTA</label><div class="flex rounded-lg border border-slate-300 overflow-hidden"><input type="radio" name="htn_treated" id="htn_yes" value="1" class="sr-only peer/yes_htn"><label for="htn_yes" class="w-1/2 text-center p-2 cursor-pointer peer-checked/yes_htn:bg-emerald-500 peer-checked/yes_htn:text-white transition">Oui</label><input type="radio" name="htn_treated" id="htn_no" value="0" class="sr-only peer/no_htn" checked><label for="htn_no" class="w-1/2 text-center p-2 cursor-pointer peer-checked/no_htn:bg-emerald-500 peer-checked/no_htn:text-white transition border-l">Non</label></div></div>
+                    </div>
+                    ${resultDisplay(['cv_risk_result'])}
+                    <div class="mt-4">${actionButtons('cv_risk')}</div>
+                `,
+                formula: 'Score de risque de maladie cardiovasculaire à 10 ans basé sur la formule de Framingham (2008).',
+                calculate: function() {
+                    const { age, total_chol, hdl_chol, sbp, gender } = appState.values;
+                    const smoker = parseInt(this.querySelector('input[name="smoker"]:checked')?.value || '0');
+                    const htn_treated = parseInt(this.querySelector('input[name="htn_treated"]:checked')?.value || '0');
+
+                    if(!age || !total_chol || !hdl_chol || !sbp) return {cv_risk_result: 'N/A'};
+                    
+                    let l, s0;
+                    if(gender === 'male'){
+                        l = 2.32888 * Math.log(age) + 1.20904 * Math.log(total_chol) - 0.70833 * Math.log(hdl_chol) + (htn_treated ? 2.82263 : 2.76157) * Math.log(sbp) + 0.52873 * smoker;
+                        s0 = 0.9602;
+                    } else { // female
+                        l = 2.65921 * Math.log(age) + 1.31341 * Math.log(total_chol) - 0.90332 * Math.log(hdl_chol) + (htn_treated ? 2.88267 : 2.81291) * Math.log(sbp) + 0.61868 * smoker;
+                        s0 = 0.9870;
+                    }
+                    const mean_l = (gender === 'male') ? 23.9802 : 26.1931;
+                    const risk = (1 - Math.pow(s0, Math.exp(l - mean_l))) * 100;
+                    
+                    let riskColor = 'text-green-600';
+                    if (risk >= 10) riskColor = 'text-yellow-600';
+                    if (risk >= 20) riskColor = 'text-red-600';
+
+                    return { cv_risk_result: `Risque à 10 ans : <span class="font-bold text-3xl ${riskColor}">${risk.toFixed(1)}%</span>`};
                 }
             },
             // === DIALYSE ===
@@ -264,8 +467,12 @@
                 calculate: function() {
                     const { urea_p, urea_u, creat, u_creat, urine_vol_24h } = appState.values;
                     if (!urea_p || !urea_u || !creat || !u_creat || !urine_vol_24h) return { rrf_result: 'N/A', rrf_interpretation: '' };
-                    const urea_clearance = (urea_u * urine_vol_24h) / (urea_p * 1440);
-                    const creat_clearance = (u_creat * urine_vol_24h) / (creat * 1440);
+                    const urea_p_base = convertUnit('urea', urea_p, appState.units.urea, 'mg/dL');
+                    const urea_u_base = convertUnit('urea', urea_u, appState.units.urea, 'mg/dL');
+                    const creat_p_base = convertUnit('creatinine', creat, appState.units.creatinine, 'mg/dL');
+                    const creat_u_base = convertUnit('creatinine', u_creat, appState.units.creatinine, 'mg/dL');
+                    const urea_clearance = (urea_u_base * urine_vol_24h) / (urea_p_base * 1440);
+                    const creat_clearance = (creat_u_base * urine_vol_24h) / (creat_p_base * 1440);
                     const rrf = (urea_clearance + creat_clearance) / 2;
                     let interpretation = '';
                     if (urine_vol_24h < 100) { interpretation = `<span class="font-semibold text-red-600">Diurèse < 100 mL/24h (anurie). FRR perdue.</span>`; } 
@@ -284,7 +491,9 @@
                 calculate: function() {
                     const { urea_p, post_urea, duration, uf_volume, post_weight } = appState.values;
                     if (!urea_p || !post_urea || !duration || !uf_volume || !post_weight) return { ktv_result: 'N/A' };
-                    const r = post_urea / urea_p;
+                    const urea_pre_base = convertUnit('urea', urea_p, appState.units.urea, 'mg/dL');
+                    const urea_post_base = convertUnit('urea', post_urea, appState.units.urea, 'mg/dL');
+                    const r = urea_post_base / urea_pre_base;
                     const ktv = -Math.log(r - 0.008 * duration) + (4 - 3.5 * r) * uf_volume / post_weight;
                     return { ktv_result: `<span class="font-bold text-3xl">${ktv.toFixed(2)}</span>` };
                 }
@@ -299,7 +508,9 @@
                 calculate: function() {
                     const { urea_p, post_urea } = appState.values;
                     if (!urea_p || !post_urea) return { urr_result: 'N/A' };
-                    const urr = ((urea_p - post_urea) / urea_p) * 100;
+                    const urea_pre_base = convertUnit('urea', urea_p, appState.units.urea, 'mg/dL');
+                    const urea_post_base = convertUnit('urea', post_urea, appState.units.urea, 'mg/dL');
+                    const urr = ((urea_pre_base - urea_post_base) / urea_pre_base) * 100;
                     return { urr_result: `<span class="font-bold text-3xl">${urr.toFixed(1)}</span> %` };
                 }
             },
@@ -316,7 +527,7 @@
                     if (!age || !creat) return { graft_risk: 'N/A' };
                     const isDeceasedDonor = this.querySelector('input[name="donor_type"]:checked')?.value === 'yes';
                     const isRetransplant = this.querySelector('input[name="retransplant"]:checked')?.value === 'yes';
-                    const creat_mgdl = convertUnit(creat, appState.units.creatinine, 'mg/dL');
+                    const creat_mgdl = convertUnit('creatinine', creat, appState.units.creatinine, 'mg/dL');
                     const mdrd = 175 * Math.pow(creat_mgdl, -1.154) * Math.pow(age, -0.203) * (gender === 'female' ? 0.742 : 1);
                     let score = 0.02 * age - 0.03 * mdrd + (isDeceasedDonor ? 0.53 : 0) + (isRetransplant ? 0.49 : 0);
                     const risk = 1 / (1 + Math.exp(-(-2.27 + score))) * 100;
@@ -335,6 +546,8 @@
             else if (id === 'alb') { unitSelector = unitDropdown('albumin', ['g/dL', 'g/L']); }
             else if (['urea_p', 'urea_u', 'post_urea'].includes(id)) { unitSelector = unitDropdown('urea', ['mg/dL', 'mmol/L', 'g/L']); }
             else if (id === 'actual_hb' || id === 'target_hb') { unitSelector = unitDropdown('hb', ['g/dL', 'g/L', 'mmol/L']); }
+             else if (id === 'glucose') { unitSelector = unitDropdown('glucose', ['mg/dL', 'mmol/L', 'g/L']); }
+             else if (id === 'total_chol' || id === 'hdl_chol') { unitSelector = unitDropdown(id.split('_')[0], ['mg/dL', 'mmol/L']); }
             return `<div class="space-y-1.5"><label for="input-${id}" class="text-sm font-medium text-slate-600">${label}</label><div class="flex items-center gap-2"><input type="${type}" id="input-${id}" data-id="${id}" value="${value}" placeholder="${placeholder || '... '}" class="w-full p-2 border border-slate-300 rounded-lg bg-slate-50 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition">${unit ? `<span class="text-sm text-slate-500 font-semibold">${unit}</span>` : unitSelector}</div></div>`;
         }
         
@@ -363,25 +576,47 @@
                     </div>`;
         }
 
-        function convertUnit(value, fromUnit, toUnit) {
-            if (fromUnit === toUnit || !value) return value;
-            const conv = {
-                urea: { 'mmol/L': { 'mg/dL': v => v * 6.006, 'g/L': v => v * 0.06006 }, 'mg/dL': { 'mmol/L': v => v / 6.006, 'g/L': v => v / 100 }, 'g/L': { 'mmol/L': v => v / 0.06006, 'mg/dL': v => v * 100 }},
-                creatinine: { 'µmol/L': { 'mg/dL': v => v / 88.4 }, 'mg/dL': { 'µmol/L': v => v * 88.4 }, 'mg/L': { 'mg/dL': v => v / 10}, 'mg/dL': { 'mg/L': v => v * 10}},
-                calcium: { 'mg/dL': { 'mmol/L': v => v / 4.01 }, 'mmol/L': { 'mg/dL': v => v * 4.01 }, 'mg/L': { 'mmol/L': v => v / 40.1 }, 'mmol/L': { 'mg/L': v => v * 40.1 } },
-                albumin: { 'g/L': { 'g/dL': v => v / 10 }, 'g/dL': { 'g/L': v => v * 10 } },
-                hb: { 'g/L': {'g/dL': v => v / 10}, 'g/dL': {'g/L': v => v * 10}, 'mmol/L': {'g/dL': v => v * 1.611}, 'g/dL': {'mmol/L': v => v / 1.611} }
+        function convertUnit(substance, value, fromUnit, toUnit) {
+            if (fromUnit === toUnit || !value) return parseFloat(value);
+            
+            const CONVERSIONS = {
+                urea: { base: 'mmol/L', to_base: { 'mg/dL': v => v / 6.006, 'g/L': v => v / 0.06006 }},
+                creatinine: { base: 'µmol/L', to_base: { 'mg/dL': v => v * 88.4, 'mg/L': v => (v / 10) * 88.4 }},
+                calcium: { base: 'mmol/L', to_base: { 'mg/dL': v => v / 4.01, 'mg/L': v => v / 40.1 }},
+                albumin: { base: 'g/L', to_base: { 'g/dL': v => v * 10 }},
+                hb: { base: 'g/dL', to_base: { 'g/L': v => v / 10, 'mmol/L': v => v * 1.611 }},
+                glucose: { base: 'mmol/L', to_base: { 'mg/dL': v => v / 18.0182, 'g/L': v => v / 0.180182 }},
+                pth: { base: 'pg/mL', to_base: { 'pmol/L': v => v / 0.106 }}
             };
-            for (const substance in conv) {
-                if(conv[substance][fromUnit] && conv[substance][fromUnit][toUnit]) return conv[substance][fromUnit][toUnit](value);
-                if(conv[substance][toUnit] && conv[substance][toUnit][fromUnit]) return 1/conv[substance][toUnit][fromUnit](1/value);
+
+            const s = CONVERSIONS[substance];
+            if (!s) return parseFloat(value);
+
+            const numericValue = parseFloat(value);
+            if (isNaN(numericValue)) return NaN;
+
+            let baseValue = numericValue;
+            if (fromUnit !== s.base) {
+                if (s.to_base[fromUnit]) {
+                    baseValue = s.to_base[fromUnit](baseValue);
+                }
             }
-            return value; 
+            
+            if (toUnit === s.base) return baseValue;
+
+            for (const key in s.to_base) {
+                if (key === toUnit) {
+                    const factor = s.to_base[key](1);
+                    return baseValue / factor;
+                }
+            }
+            
+            return numericValue;
         }
 
         // --- CORE LOGIC & EVENT HANDLERS ---
-        function updateAllCalculators() { document.querySelectorAll('.calculator-card').forEach(card => { if (card.offsetParent !== null) { updateSingleCalculator(card, false); } }); }
-        function updateSingleCalculator(card, shouldSave = true) {
+        function updateAllCalculators(shouldSave = false) { document.querySelectorAll('.calculator-card').forEach(card => { if (card.offsetParent !== null) { updateSingleCalculator(card, shouldSave); } }); }
+        function updateSingleCalculator(card, shouldSave) {
             const calcId = card.id.replace('calc-', '').replace('fav-','');
             const calcDef = calculators.find(c => c.id === calcId);
             if (calcDef && typeof calcDef.calculate === 'function') {
@@ -403,6 +638,7 @@
             const target = e.target; let needsUpdate = false;
             if (target.dataset.id) { appState.values[target.dataset.id] = target.value; needsUpdate = true; }
             if (target.dataset.unitType) { appState.units[target.dataset.unitType] = target.value; needsUpdate = true; }
+            if (target.closest('#converter-body')) { handleConverterChange(target); }
             if (needsUpdate) { syncAllInputs(); }
         }
         function saveLastCalculation(card) { 
@@ -414,13 +650,13 @@
                 const historyEntry = { id: calcId, title: calcDef.title, timestamp: new Date().toISOString(), inputs: { ...appState.values }, units: { ...appState.units }, result: resultText };
                 appState.history.unshift(historyEntry);
                 appState.history = [...new Map(appState.history.map(item => [item.title + item.result, item])).values()].slice(0, 20);
-                localStorage.setItem('nephro_history_v18', JSON.stringify(appState.history));
+                localStorage.setItem('nephro_history_v39', JSON.stringify(appState.history));
                 renderHistory();
             }
         }
         function renderCalculators() {
-            const panes = { clinique: document.getElementById('clinique-pane'), dialyse: document.getElementById('dialyse-pane'), transplantation: document.getElementById('transplantation-pane') };
-            Object.values(panes).forEach(p => p.innerHTML = ''); 
+            const panes = { clinique: document.getElementById('clinique-pane'), dialyse: document.getElementById('dialyse-pane'), transplantation: document.getElementById('transplantation-pane'), ia: document.getElementById('ia-pane') };
+            Object.values(panes).forEach(p => { if (p) p.innerHTML = '' }); 
             const appendCard = (calc, container) => {
                 const card = document.createElement('div'); card.id = `calc-${calc.id}`; card.className = 'calculator-card bg-white p-4 rounded-xl shadow-md';
                 card.dataset.tags = calc.tags; card.dataset.title = calc.title;
@@ -428,9 +664,8 @@
                 container.appendChild(card);
             };
             calculators.forEach(calc => { if (panes[calc.pane]) appendCard(calc, panes[calc.pane]); });
-            renderHistory(); syncAllInputs(); updateAllCalculators(); if(window.lucide) { lucide.createIcons(); }
+            renderHistory(); syncAllInputs(); if(window.lucide) { lucide.createIcons(); }
         }
-       
         function renderHistory() {
              const list = document.getElementById('history-list'); list.innerHTML = '';
              if (appState.history.length === 0) { list.innerHTML = `<div class="text-center text-slate-500 p-6 bg-white rounded-lg"><i data-lucide="list-x" class="w-10 h-10 mx-auto mb-2"></i><p>Aucun calcul dans l'historique.</p></div>`; } 
@@ -443,7 +678,7 @@
                         appState.values = { ...entry.inputs }; appState.units = { ...entry.units };
                         const calcDef = calculators.find(c => c.id === entry.id);
                         if (calcDef) { document.querySelector(`[data-tab="${calcDef.pane}"]`).click(); }
-                        syncAllInputs(); updateAllCalculators();
+                        syncAllInputs(); updateAllCalculators(false);
                         setTimeout(() => { const cardToScroll = document.querySelector(`#${calcDef.pane}-pane #calc-${entry.id}`); if(cardToScroll) cardToScroll.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 100);
                     });
                     list.appendChild(item);
@@ -457,7 +692,7 @@
             button.classList.add('tab-active');
             document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.add('hidden'));
             document.getElementById(`${button.dataset.tab}-pane`).classList.remove('hidden');
-            updateAllCalculators();
+            updateAllCalculators(false);
         }
         function handleSearch(e) {
             const query = e.target.value.toLowerCase().trim();
@@ -469,7 +704,7 @@
         function handleCardActions(e) {
             const infoBtn = e.target.closest('.info-btn-result');
             const calcBtn = e.target.closest('.calculate-btn');
-
+            
             if (calcBtn) {
                 const card = calcBtn.closest('.calculator-card');
                 updateSingleCalculator(card, true);
@@ -478,29 +713,136 @@
                 const calcId = infoBtn.dataset.calcId; const calc = calculators.find(c => c.id === calcId);
                 document.getElementById('modal-title').innerText = `Formules: ${calc.title}`; document.getElementById('modal-content').innerHTML = calc.formula; openModal();
             }
-             if (e.target.closest('#add-creat-entry')) {
-                const container = e.target.closest('.calculator-card').querySelector('#creat-entries');
-                const newEntry = document.createElement('div'); newEntry.className = 'flex gap-2 items-center';
-                newEntry.innerHTML = `<input type="date" class="creat-date border border-slate-300 p-2 rounded-lg flex-1 bg-slate-50" value="${new Date().toISOString().split('T')[0]}"><input type="number" step="0.01" class="creat-value border border-slate-300 p-2 rounded-lg flex-1 bg-slate-50" placeholder="Valeur"><button class="creat-remove text-red-500 hover:text-red-700 p-2"><i data-lucide="x" class="w-5 h-5"></i></button>`;
+             if (e.target.closest('#add-kdigo-creat-entry')) {
+                const container = e.target.closest('.calculator-card').querySelector('#kdigo-creat-entries');
+                const newEntry = document.createElement('div');
+                newEntry.className = 'flex gap-2 items-center kdigo-entry';
+                newEntry.innerHTML = `<input type="datetime-local" class="kdigo-creat-date border p-2 rounded-lg flex-1 bg-slate-50" value="${new Date().toISOString().slice(0, 16)}"><input type="number" step="0.01" class="kdigo-creat-value border p-2 rounded-lg flex-1 bg-slate-50" placeholder="Valeur"><button class="kdigo-creat-remove text-red-500 hover:text-red-700 p-2"><i data-lucide="x" class="w-5 h-5"></i></button>`;
                 container.appendChild(newEntry); if(window.lucide) { lucide.createIcons(); }
             }
-            if (e.target.closest('.creat-remove')) {
-                const card = e.target.closest('.calculator-card'); e.target.closest('.flex.gap-2.items-center').remove();
-                if (card) { calculators.find(c=>c.id === card.id.replace('calc-','')).postRender(card) }
+            if (e.target.closest('.kdigo-creat-remove')) {
+                e.target.closest('.kdigo-entry').remove();
             }
         }
-        function handleClearHistory() { appState.history = []; localStorage.removeItem('nephro_history_v18'); renderHistory(); }
+        function handleClearHistory() { appState.history = []; localStorage.removeItem('nephro_history_v39'); renderHistory(); }
         const modal = document.getElementById('formula-modal'); const modalInner = document.getElementById('modal-inner');
         function openModal() { modal.style.display = 'flex'; setTimeout(() => { modalInner.classList.remove('scale-95', 'opacity-0'); modalInner.classList.add('scale-100', 'opacity-100'); }, 10); }
         function closeModal() { modalInner.classList.add('scale-95', 'opacity-0'); setTimeout(() => { modal.style.display = 'none'; }, 200); }
-        document.getElementById('close-modal-btn').addEventListener('click', closeModal);
-        modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+        function handleConverterChange(target) {
+            const key = target.dataset.converterInput || target.dataset.converterSelect;
+            const sourceIdx = target.dataset.converterIdx;
+            const targetIdx = sourceIdx === '1' ? '2' : '1';
+            
+            const card = target.closest('.calculator-card');
+            const sourceInput = card.querySelector(`[data-converter-input="${key}"][data-converter-idx="${sourceIdx}"]`);
+            const sourceSelect = card.querySelector(`[data-converter-select="${key}"][data-converter-idx="${sourceIdx}"]`);
+            const targetInput = card.querySelector(`[data-converter-input="${key}"][data-converter-idx="${targetIdx}"]`);
+            const targetSelect = card.querySelector(`[data-converter-select="${key}"][data-converter-idx="${targetIdx}"]`);
+
+            const value = parseFloat(sourceInput.value);
+            const fromUnit = sourceSelect.value;
+            const toUnit = targetSelect.value;
+            
+            if (isNaN(value)) {
+                targetInput.value = '';
+                return;
+            }
+
+            const convertedValue = convertUnit(key, value, fromUnit, toUnit);
+            if (targetInput !== document.activeElement) {
+               targetInput.value = convertedValue.toFixed(2);
+            }
+        }
+        function renderCreatinineGraph(card) {
+            if (!card) return;
+            const container = card.querySelector('#creat-entries');
+            container.innerHTML = '';
+            appState.creatinineHistory.forEach((entry, index) => {
+                 const row = document.createElement('div');
+                 row.className = 'flex gap-2 items-center';
+                 row.innerHTML = `
+                    <input type="date" class="creat-date border p-2 rounded-lg flex-1 bg-slate-50" value="${entry.date}" data-index="${index}">
+                    <input type="number" step="0.01" class="creat-value border p-2 rounded-lg flex-1 bg-slate-50" value="${entry.value}" placeholder="Valeur" data-index="${index}">
+                    <button class="creat-remove text-red-500 hover:text-red-700 p-2" data-index="${index}"><i data-lucide="x" class="w-5 h-5"></i></button>
+                 `;
+                 container.appendChild(row);
+            });
+
+            const ctx = card.querySelector('#creatinine-chart-canvas').getContext('2d');
+            if (creatinineChart) creatinineChart.destroy();
+            const sortedEntries = [...appState.creatinineHistory].filter(e => e.date && e.value).sort((a,b) => new Date(a.date) - new Date(b.date));
+            creatinineChart = new Chart(ctx, { type: 'line', data: { labels: sortedEntries.map(e => new Date(e.date).toLocaleDateString('fr-FR')), datasets: [{ label: `Créatininémie (${appState.units.creatinine})`, data: sortedEntries.map(e => e.value), borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.1)', tension: 0.1, fill: true }] }, options: { responsive: true, maintainAspectRatio: true } });
+            if(window.lucide) { lucide.createIcons(); }
+        }
+         function renderKdigoCreatinineEntries(card) {
+            const container = card.querySelector('#kdigo-creat-entries');
+            if(container.children.length === 0){
+                for(let i=0; i<2; i++){
+                    const newEntry = document.createElement('div');
+                    newEntry.className = 'flex gap-2 items-center kdigo-entry';
+                    newEntry.innerHTML = `<input type="datetime-local" class="kdigo-creat-date border p-2 rounded-lg flex-1 bg-slate-50" value="${new Date().toISOString().slice(0, 16)}"><input type="number" step="0.01" class="kdigo-creat-value border p-2 rounded-lg flex-1 bg-slate-50" placeholder="${i === 0 ? 'Créat de base (si connue)' : 'Créat actuelle'}"><button class="kdigo-creat-remove text-red-500 hover:text-red-700 p-2"><i data-lucide="x" class="w-5 h-5"></i></button>`;
+                    container.appendChild(newEntry);
+                }
+                if(window.lucide) lucide.createIcons();
+            }
+        }
+        function evaluateKdigo(card){
+            let diagnosis = [];
+            let color = 'text-green-600';
+
+            // Diuresis criteria
+            const { urine_vol_kdigo, urine_hours_kdigo, weight } = appState.values;
+            if(urine_vol_kdigo && urine_hours_kdigo && weight){
+                const diuresis_ml_kg_h = urine_vol_kdigo / weight / urine_hours_kdigo;
+                if(diuresis_ml_kg_h < 0.5 && urine_hours_kdigo >= 6){
+                    diagnosis.push("IRA Stade 1 (Critère Diurèse)");
+                    color = 'text-orange-600';
+                }
+            }
+
+            // Creatinine criteria
+            const entries = Array.from(card.querySelectorAll('.kdigo-entry')).map(row => ({
+                date: new Date(row.querySelector('.kdigo-creat-date').value),
+                value: parseFloat(row.querySelector('.kdigo-creat-value').value)
+            })).filter(e => e.date && !isNaN(e.value)).sort((a,b) => a.date - b.date);
+
+            if(entries.length >= 2){
+                for(let i = 0; i < entries.length; i++){
+                    for(let j = i + 1; j < entries.length; j++){
+                        const time_diff_hours = (entries[j].date - entries[i].date) / (1000 * 60 * 60);
+                        const creat_i_mgdl = convertUnit('creatinine', entries[i].value, appState.units.creatinine, 'mg/dL');
+                        const creat_j_mgdl = convertUnit('creatinine', entries[j].value, appState.units.creatinine, 'mg/dL');
+                        const creat_diff = creat_j_mgdl - creat_i_mgdl;
+
+                        if(creat_diff >= 0.3 && time_diff_hours <= 48){
+                             if(!diagnosis.includes("IRA Stade 1 (Critère Créatinine)")) diagnosis.push("IRA Stade 1 (Critère Créatinine)");
+                             color = 'text-orange-600';
+                        }
+                    }
+                    if(i > 0 && entries[i].value >= 1.5 * entries[0].value){
+                        if(!diagnosis.includes("IRA Stade 1 (Critère Créatinine)")) diagnosis.push("IRA Stade 1 (Critère Créatinine)");
+                        color = 'text-orange-600';
+                    }
+                }
+            }
+            
+            let finalDiagnosis = "Critères d'IRA non remplis.";
+            if(diagnosis.length > 0){
+                finalDiagnosis = diagnosis.join(' et ');
+            }
+            
+            card.querySelector('#result-kdigo_result').innerHTML = `<span class="font-bold text-lg ${color}">${finalDiagnosis}</span>`;
+        }
         function init() {
             const contentPanes = document.getElementById('content-panes');
             document.getElementById('main-tabs').addEventListener('click', handleTabSwitch);
             document.getElementById('searchInput').addEventListener('input', handleSearch);
-            contentPanes.addEventListener('input', handleStateChange); contentPanes.addEventListener('click', handleCardActions);
+            contentPanes.addEventListener('input', handleStateChange); 
+            contentPanes.addEventListener('change', (e) => { if(e.target.dataset.converterSelect) handleConverterChange(e.target); });
+            contentPanes.addEventListener('click', handleCardActions);
             document.getElementById('clearHistoryBtn').addEventListener('click', handleClearHistory);
+            document.getElementById('close-modal-btn').addEventListener('click', closeModal);
+            modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
             renderCalculators();
         }
         init();
