@@ -1,7 +1,10 @@
 // A simple cache-first service worker
-const CACHE_NAME = 'nephro-calc-v18-cache';
+const CACHE_NAME = 'nephro-calc-v41-cache';
 const urlsToCache = [
   './', // Caches the index.html
+  './manifest.json',
+  './icons/icon-192x192.png',
+  './icons/icon-512x512.png',
   'https://cdn.tailwindcss.com',
   'https://cdn.jsdelivr.net/npm/chart.js',
   'https://unpkg.com/lucide@0.378.0/dist/lucide.min.js'
@@ -31,7 +34,7 @@ self.addEventListener('fetch', event => {
         return fetch(event.request).then(
           response => {
             // Check if we received a valid response
-            if(!response || response.status !== 200 || response.type !== 'basic' && !event.request.url.startsWith('https://fonts.gstatic.com')) {
+            if(!response || response.status !== 200 || (response.type !== 'basic' && !event.request.url.startsWith('https://fonts.gstatic.com'))) {
               return response;
             }
 
