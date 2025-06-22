@@ -1,69 +1,47 @@
-// A simple cache-first service worker
-const CACHE_NAME = 'nephro-calc-v41-cache';
+// Nom du cache
+const CACHE_NAME = 'nephro-pro-cache-v1';
+
+// Fichiers à mettre en cache dès l'installation
+// Important : Le chemin vers vos fichiers JS et CSS dépend de votre configuration (Vite, Create React App, etc.)
+// Adaptez les chemins si votre outil de build génère des noms de fichiers avec des hash.
 const urlsToCache = [
-  './', // Caches the index.html
-  './manifest.json',
-  './icons/icon-192x192.png',
-  './icons/icon-512x512.png',
-  'https://cdn.tailwindcss.com',
-  'https://cdn.jsdelivr.net/npm/chart.js',
-  'https://unpkg.com/lucide@0.378.0/dist/lucide.min.js'
+  '/',
+  'index.html',
+  'manifest.json',
+  // Chemins corrigés pour les icônes
+  'icon-72x72.png',
+  'icon-96x96.png',
+  'icon-192x192.png',
+  'icon-512x512.png'
+  // Vous ajouterez ici les chemins vers vos fichiers JS et CSS
+  // ex: '/assets/index-a4b1c2d3.js', 
 ];
 
-// Install event: open cache and add all essential assets
+// Installation du Service Worker et mise en cache
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => {
-        console.log('Opened cache and caching assets');
+        console.log('Cache ouvert');
         return cache.addAll(urlsToCache);
       })
   );
 });
 
-// Fetch event: serve from cache if available, otherwise fetch from network
+// Stratégie "Cache-First"
+// Le Service Worker essaie de servir depuis le cache d'abord.
+// S'il ne trouve pas la ressource, il la demande au réseau.
 self.addEventListener('fetch', event => {
   event.respondWith(
     caches.match(event.request)
       .then(response => {
-        // Cache hit - return response
+        // Si la réponse est dans le cache, on la retourne
         if (response) {
           return response;
         }
-        // Not in cache - fetch from network, then cache it
-        return fetch(event.request).then(
-          response => {
-            // Check if we received a valid response
-            if(!response || response.status !== 200 || (response.type !== 'basic' && !event.request.url.startsWith('https://fonts.gstatic.com'))) {
-              return response;
-            }
-
-            const responseToCache = response.clone();
-            caches.open(CACHE_NAME)
-              .then(cache => {
-                cache.put(event.request, responseToCache);
-              });
-
-            return response;
-          }
-        );
-      })
-  );
-});
-
-// Activate event: clean up old caches
-self.addEventListener('activate', event => {
-  const cacheWhitelist = [CACHE_NAME];
-  event.waitUntil(
-    caches.keys().then(cacheNames => {
-      return Promise.all(
-        cacheNames.map(cacheName => {
-          if (cacheWhitelist.indexOf(cacheName) === -1) {
-            console.log('Deleting old cache:', cacheName);
-            return caches.delete(cacheName);
-          }
-        })
-      );
-    })
+        // Sinon, on fait une requête réseau
+        return fetch(event.request);
+      }
+    )
   );
 });
